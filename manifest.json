@@ -1,0 +1,25 @@
+{
+  "name": "AYK SAYUR",
+  "short_name": "AYK SAYUR",
+  "description": "Sayur Segar, Belanja Praktis",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#287a3d",
+  "lang": "id-ID",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
