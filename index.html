@@ -103,7 +103,15 @@ function landing(){role=null;document.getElementById("app").innerHTML=`<header>
 <div style="color:#287a3d;font-weight:bold;margin-top:8px">📱 Scan untuk Belanja</div>
 <small style="color:#555">ayksayur.vercel.app</small>
 </div>
-</header><div class="page role"><h2>Masuk sebagai</h2><div class="role-card" onclick="buyerLogin()"><div class="role-icon">👤</div><b>PEMBELI</b><small>Belanja sayuran dan lihat pesanan</small></div><div class="role-card" onclick="adminLogin()"><div class="role-icon">🔐</div><b>ADMIN</b><small>Kelola produk, stok, paket & transaksi</small></div></div>`}
+</header>
+
+<div style="background:#fff;border-radius:16px;padding:12px;margin-top:12px;text-align:center">
+<img src="AYK_SAYUR_QR_DOWNLOAD_APLIKASI.png" alt="QR Download Aplikasi AYK SAYUR" style="width:180px;height:180px;object-fit:contain">
+<div style="color:#287a3d;font-weight:bold;margin-top:8px">📲 Download Aplikasi</div>
+<small style="color:#555">Buka lalu pilih Instal Aplikasi</small>
+</div>
+
+<div class="page role"><div clas</header><div class="page role"><h2>Masuk sebagai</h2><div class="role-card" onclick="buyerLogin()"><div class="role-icon">👤</div><b>PEMBELI</b><small>Belanja sayuran dan lihat pesanan</small></div><div class="role-card" onclick="adminLogin()"><div class="role-icon">🔐</div><b>ADMIN</b><small>Kelola produk, stok, paket & transaksi</small></div></div>`}
 function buyerLogin(){role="buyer";buyerApp()}
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
 function adminLogin(){document.getElementById("app").innerHTML=`<header><h1>🥬 AYK SAYUR</h1><p>Login Administrator</p></header><div class="page login"><h2>🔐 Masuk Admin</h2><label>Jenis Admin</label><select id="adminType" class="input" onchange="toggleBranchLogin()"><option value="pusat">Admin Pusat</option><option value="cabang">Admin Cabang</option></select><div id="branchLoginBox" style="display:none"><label>Pilih Cabang</label><select id="loginBranch" class="input">${branches.filter(b=>b.id!=="pusat").map(b=>`<option value="${b.id}">${b.name}</option>`).join("")||`<option value="">Belum ada cabang</option>`}</select></div><label>Password admin</label><div style="display:flex;gap:6px"><input id="adminPass" class="input" style="flex:1" type="password" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')checkAdmin()"><button class="btn light" type="button" onclick="togglePwd('adminPass',this)">👁️</button></div><button class="btn green full" onclick="checkAdmin()">Masuk</button><button class="btn light full" style="margin-top:8px" onclick="landing()">← Kembali</button><p style="font-size:12px;color:#777">Password Admin Pusat awal: <b>1234</b>.</p></div>`;toggleBranchLogin()}
