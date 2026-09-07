@@ -144,7 +144,6 @@ async function syncOrder(o){if(!sbReady)return;const {error}=await sb.from("pesa
 async function syncOrderStatus(id,status){if(!sbReady)return;const {error}=await sb.from("pesanan").update({status}).eq("id",id);if(error)throw error}
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1300)}
 function landing(){role=null;let fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");document.getElementById("app").innerHTML=`<header style="background:${fs.bg || ""}">
-<h1>
 <h1>${fs.logo || "🥬 AYK SAYUR"}</h1>
 <p>${fs.tagline || "Sayur Segar, Belanja Praktis"}</p>
 <div style="background:#fff;border-radius:16px;padding:12px;margin-top:15px;text-align:center">
@@ -228,7 +227,7 @@ async function removeBranch(id){if(!confirm("Hapus cabang ini?"))return;try{if(s
 async function changeBranchPassword(id){let np=prompt("Password baru untuk "+branchName(id)+" (minimal 6 karakter):");if(np===null)return;if(np.length<6)return toast("Password minimal 6 karakter");try{if(sbReady){let {error}=await sb.from("admin_cabang").update({password:np}).eq("cabang_id",id);if(error)throw error;}let a=branchAdmins.filter(x=>x.branchId!==id);a.push({branchId:id,password:np});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Password cabang berhasil diubah")}catch(e){toast("Gagal ubah password: "+e.message)}}
 async function manageBranch(id){currentBranchId=id;await loadBranchOverrides(id);let box=document.getElementById("branchManage");if(!box)return;box.innerHTML=`<div class="panel"><h3>⚙️ Harga & Stok: ${branchName(id)}</h3><p><small>Kosongkan harga khusus untuk mengikuti harga pusat. Stok cabang wajib diisi.</small></p>${products.map(p=>{let ov=branchOverrides[String(p.id)]||{};return `<div style="border-top:1px solid #eee;padding:10px 0"><b>${p.name}</b><input id="bp_${p.id}" class="input" type="number" value="${ov.price??""}" placeholder="Harga khusus (kosong = harga pusat ${p.basePrice??p.price})"><input id="bs_${p.id}" class="input" type="number" value="${ov.stock??0}" placeholder="Stok cabang"><button class="btn green" onclick="saveBranchProduct('${id}',${p.id})">Simpan</button></div>`}).join("")}</div>`}
 async function saveBranchProduct(branchId,pid){let priceEl=document.getElementById("bp_"+pid),stockEl=document.getElementById("bs_"+pid);let price=priceEl.value.trim()===""?null:+priceEl.value,stock=+stockEl.value;if(stock<0)return toast("Stok tidak boleh negatif");try{if(sbReady){let {error}=await sb.from("produk_cabang").upsert({cabang_id:branchId,produk_id:pid,harga_khusus:price,stock},{onConflict:"cabang_id,produk_id"});if(error)throw error;}branchOverrides[String(pid)]={price,stock};toast("Harga & stok cabang disimpan")}catch(e){toast("Gagal simpan cabang: "+e.message)}}
-function saveFrontSettings(){  function renderAdminReport(c){
+function renderAdminReport(c){
   const rows={};
   orders.filter(o=>adminMode==="pusat"||String(o.branchId||"pusat")===String(currentBranchId)).forEach(o=>{
     (o.items||[]).forEach(i=>{
