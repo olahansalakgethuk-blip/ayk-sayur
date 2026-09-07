@@ -205,10 +205,9 @@ function adminPage(which,btn){
 
 <div class="panel"><b>🎨 Pengaturan Tampilan Depan</b>
 <input id="frontLogo" class="input" type="file" accept="image/*">
-<input id="frontProfile" class="input" placeholder="Ikon profil, contoh 👤">
-<input id="frontShop" class="input" placeholder="Ikon belanja, contoh 🥬">
-<input id="frontBg" class="input" placeholder="Warna background, contoh #e8f5e9">
-<button class="btn green full" onclick="saveFrontSettings()">Simpan Tampilan</button>
+<input id="frontProfile" class="input" type="file" accept="image/*">
+<input id="frontShop" class="input" type="file" accept="image/*">
+<input id="frontBg" class="input" type="file" accept="image/*"><button class="btn green full" onclick="saveFrontSettings()">Simpan Tampilan</button>
 </div>    
     <div class="panel"><b>➕ Tambah Produk</b><input id="nn" class="input" placeholder="Nama"><input id="np" class="input" type="number" placeholder="Harga jual"><input id="nc" class="input" type="number" placeholder="Harga modal"><input id="ns" class="input" type="number" placeholder="Stok"><input id="nu" class="input" value="kg" placeholder="Satuan"><label><input id="npack" type="checkbox" checked> Aktifkan Paket 5K</label><input id="npu" class="input" value="250 gram" placeholder="Isi Paket 5K"><button class="btn green full" onclick="newProd()">+ Tambah Produk</button></div>
     ${products.map(p=>`<div class="panel"><b>${p.emoji||"🥦"} ${p.name}</b>${p.foto?'<div style="margin:8px 0"><img src="'+p.foto+'" alt="'+p.name+'" style="width:110px;height:80px;object-fit:cover;border-radius:10px;border:1px solid #ddd"></div>':'<div style="margin:8px 0;color:#888;font-size:12px">Belum ada foto</div>'}<input id="p${p.id}" class="input" type="number" value="${p.price}"><input id="s${p.id}" class="input" type="number" value="${p.stock}"><label><input id="pack${p.id}" type="checkbox" ${p.package5k?"checked":""}> Paket 5K aktif</label><input id="pu${p.id}" class="input" value="${p.packageUnit||"250 gram"}" placeholder="Isi Paket 5K"><label style="display:block;margin-top:8px"><b>📷 Foto produk</b></label><input id="foto${p.id}" class="input" type="file" accept="image/*"><button class="btn light full" onclick="uploadProductPhoto(${p.id})">📤 Upload Foto ke Supabase</button><br><button class="btn green" onclick="upd(${p.id})">Simpan</button> <button class="btn red" onclick="del(${p.id})">Hapus</button></div>`).join("")}`;
