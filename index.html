@@ -145,12 +145,7 @@ async function syncOrderStatus(id,status){if(!sbReady)return;const {error}=await
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1300)}
 function landing(){role=null;let fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");document.getElementById("app").innerHTML=`<header style="background:${fs.bg || ""}">
 <h1>
-${fs.logo
-  ? (fs.logo.startsWith("data:image/")
-      ? `<img src="${fs.logo}" alt="Logo AYK SAYUR" style="max-width:180px;max-height:90px;object-fit:contain">`
-      : fs.logo)
-  : "🥬 AYK SAYUR"}
-</h1>
+<h1>${fs.logo || "🥬 AYK SAYUR"}</h1>
 <p>${fs.tagline || "Sayur Segar, Belanja Praktis"}</p>
 <div style="background:#fff;border-radius:16px;padding:12px;margin-top:15px;text-align:center">
 <img src="AYK_SAYUR_QR_KONSUMEN.png.png" alt="QR AYK SAYUR" style="width:180px;height:180px;object-fit:contain">
