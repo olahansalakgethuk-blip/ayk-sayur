@@ -50,6 +50,53 @@ async function loadBranchOverrides(branchId=currentBranchId){branchOverrides={};
 async function applyBranchView(){await loadBranchOverrides(currentBranchId); products=products.map(p=>{let ov=branchOverrides[String(p.id)]||{};return {...p,price:ov.price!=null?Number(ov.price):p.basePrice??p.price,stock:ov.stock!=null?Number(ov.stock):p.baseStock??p.stock};});}
 
 
+function saveFrontSettings(){
+  const logoInput = document.getElementById("frontLogo");
+  const profile = document.getElementById("frontProfile").value.trim();
+  const shop = document.getElementById("frontShop").value.trim();
+  const bg = document.getElementById("frontBg").value.trim();
+
+  const saveSettings = (logo) => {
+    const s = {
+      logo: logo || "",
+      profile: profile || "👤",
+      shop: shop || "🛒",
+      bg: bg || ""
+    };
+
+    localStorage.setItem("aykFrontSettings", JSON.stringify(s));
+    fs = s;
+
+    toast("Tampilan depan berhasil disimpan");
+
+    setTimeout(() => {
+      landing();
+    }, 300);
+  };
+
+  if (logoInput && logoInput.files && logoInput.files[0]) {
+    const file = logoInput.files[0];
+
+    if (!file.type.startsWith("image/")) {
+      return toast("File logo harus berupa gambar");
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+      saveSettings(e.target.result);
+    };
+
+    reader.readAsDataURL(file);
+  } else {
+    const old = JSON.parse(
+      localStorage.getItem("aykFrontSettings") || "{}"
+    );
+
+    saveSettings(old.logo || "");
+  }
+}  
+
 function mapProduct(r){return {id:r.id,name:r.nama,price:Number(r.harga||0),cost:Number(r.modal||0),stock:Number(r.stock||0),emoji:r.emoji||"🥦",unit:r.satuan||"kg",package5k:r.paket5k_aktif!==false,packageUnit:r.paket5k_satuan||((r.satuan||"").toLowerCase()==="ikat"?"ikat":((r.satuan||"").toLowerCase()==="kg"?"250 gram":"1 paket")),category:r.kategori||"",foto:r.foto||"",aktif:r.aktif!==false,basePrice:Number(r.harga||0),baseStock:Number(r.stock||0)}}
 async function loadOnlineData(){
   if(!sbReady){toast("Mode lokal: Supabase belum diisi");return;}
@@ -97,7 +144,13 @@ async function syncOrder(o){if(!sbReady)return;const {error}=await sb.from("pesa
 async function syncOrderStatus(id,status){if(!sbReady)return;const {error}=await sb.from("pesanan").update({status}).eq("id",id);if(error)throw error}
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1300)}
 function landing(){role=null;let fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");document.getElementById("app").innerHTML=`<header style="background:${fs.bg || ""}">
-<h1>${fs.logo || "🥬 AYK SAYUR"}</h1>
+<h1>
+${fs.logo
+  ? (fs.logo.startsWith("data:image/")
+      ? `<img src="${fs.logo}" alt="Logo AYK SAYUR" style="max-width:180px;max-height:90px;object-fit:contain">`
+      : fs.logo)
+  : "🥬 AYK SAYUR"}
+</h1>
 <p>${fs.tagline || "Sayur Segar, Belanja Praktis"}</p>
 <div style="background:#fff;border-radius:16px;padding:12px;margin-top:15px;text-align:center">
 <img src="AYK_SAYUR_QR_KONSUMEN.png.png" alt="QR AYK SAYUR" style="width:180px;height:180px;object-fit:contain">
@@ -157,7 +210,7 @@ function adminPage(which,btn){
 
 
 <div class="panel"><b>🎨 Pengaturan Tampilan Depan</b>
-<input id="frontLogo" class="input" placeholder="Logo / gambar depan">
+<input id="frontLogo" class="input" type="file" accept="image/*">
 <input id="frontProfile" class="input" placeholder="Ikon profil, contoh 👤">
 <input id="frontShop" class="input" placeholder="Ikon belanja, contoh 🥬">
 <input id="frontBg" class="input" placeholder="Warna background, contoh #e8f5e9">
@@ -180,19 +233,7 @@ async function removeBranch(id){if(!confirm("Hapus cabang ini?"))return;try{if(s
 async function changeBranchPassword(id){let np=prompt("Password baru untuk "+branchName(id)+" (minimal 6 karakter):");if(np===null)return;if(np.length<6)return toast("Password minimal 6 karakter");try{if(sbReady){let {error}=await sb.from("admin_cabang").update({password:np}).eq("cabang_id",id);if(error)throw error;}let a=branchAdmins.filter(x=>x.branchId!==id);a.push({branchId:id,password:np});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Password cabang berhasil diubah")}catch(e){toast("Gagal ubah password: "+e.message)}}
 async function manageBranch(id){currentBranchId=id;await loadBranchOverrides(id);let box=document.getElementById("branchManage");if(!box)return;box.innerHTML=`<div class="panel"><h3>⚙️ Harga & Stok: ${branchName(id)}</h3><p><small>Kosongkan harga khusus untuk mengikuti harga pusat. Stok cabang wajib diisi.</small></p>${products.map(p=>{let ov=branchOverrides[String(p.id)]||{};return `<div style="border-top:1px solid #eee;padding:10px 0"><b>${p.name}</b><input id="bp_${p.id}" class="input" type="number" value="${ov.price??""}" placeholder="Harga khusus (kosong = harga pusat ${p.basePrice??p.price})"><input id="bs_${p.id}" class="input" type="number" value="${ov.stock??0}" placeholder="Stok cabang"><button class="btn green" onclick="saveBranchProduct('${id}',${p.id})">Simpan</button></div>`}).join("")}</div>`}
 async function saveBranchProduct(branchId,pid){let priceEl=document.getElementById("bp_"+pid),stockEl=document.getElementById("bs_"+pid);let price=priceEl.value.trim()===""?null:+priceEl.value,stock=+stockEl.value;if(stock<0)return toast("Stok tidak boleh negatif");try{if(sbReady){let {error}=await sb.from("produk_cabang").upsert({cabang_id:branchId,produk_id:pid,harga_khusus:price,stock},{onConflict:"cabang_id,produk_id"});if(error)throw error;}branchOverrides[String(pid)]={price,stock};toast("Harga & stok cabang disimpan")}catch(e){toast("Gagal simpan cabang: "+e.message)}}
-function saveFrontSettings(){
-  let logo=document.getElementById("frontLogo").value.trim();
-  let profile=document.getElementById("frontProfile").value.trim();
-  let shop=document.getElementById("frontShop").value.trim();
-  let bg=document.getElementById("frontBg").value.trim();
-
-  let s={logo,profile,shop,bg};
-  localStorage.setItem("aykFrontSettings",JSON.stringify(s));
-fs=s;
-
-  toast("Tampilan depan berhasil disimpan");
-}
-  function renderAdminReport(c){
+function saveFrontSettings(){  function renderAdminReport(c){
   const rows={};
   orders.filter(o=>adminMode==="pusat"||String(o.branchId||"pusat")===String(currentBranchId)).forEach(o=>{
     (o.items||[]).forEach(i=>{
