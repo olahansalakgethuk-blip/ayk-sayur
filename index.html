@@ -226,9 +226,17 @@ function adminLogin(){document.getElementById("app").innerHTML=`<header><h1>🥬
 function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
 function checkAdmin(){let type=document.getElementById("adminType").value; if(type==="pusat"){if(document.getElementById("adminPass").value===getAdminPassword()){role="admin";adminMode="pusat";currentBranchId="pusat";adminApp()}else toast("Password salah")}else{let id=document.getElementById("loginBranch").value,pass=document.getElementById("adminPass").value;let u=branchAdmins.find(x=>String(x.branchId)===String(id))||JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));if(u&&u.password===pass){role="admin";adminMode="cabang";currentBranchId=id;adminApp()}else toast("Password cabang salah")}}
 function changeAdminPassword(){let old=document.getElementById("oldAdminPass").value,newp=document.getElementById("newAdminPass").value,conf=document.getElementById("confirmAdminPass").value;if(old!==getAdminPassword())return toast("Password lama salah");if(newp.length<6)return toast("Password baru minimal 6 karakter");if(newp!==conf)return toast("Konfirmasi password tidak sama");localStorage.setItem("aykAdminPassword",newp);toast("Password admin berhasil diganti");document.getElementById("oldAdminPass").value="";document.getElementById("newAdminPass").value="";document.getElementById("confirmAdminPass").value=""}
-function buyerApp(){document.getElementById("app").innerHTML=`<header><h1>${fs.logo && fs.logo.startsWith("data:image/")
-  ? `<img src="${fs.logo}" style="width:150px;height:150px;object-fit:contain">`
-  : (fs.logo || "🥬 AYK SAYUR")}</h1><p>Selamat datang, Pembeli</p></header><div class="top">${typeof fs.shop==="string" && fs.shop.trim().startsWith("data:image/")
+function buyerApp(){document.getElementById("app").innerHTML=`<header style="display:flex;align-items:center;gap:15px">
+<div style="width:90px;text-align:center">
+${fs.logo && fs.logo.startsWith("data:image/")
+  ? `<img src="${fs.logo}" style="width:80px;height:80px;object-fit:contain">`
+  : `<span style="font-size:42px">🥬</span>`}
+</div>
+<div style="text-align:left">
+<h1 style="margin:0">AYK SAYUR</h1>
+<p style="margin:4px 0 0">Selamat datang, Pembeli</p>
+</div>
+</header><div class="top">${typeof fs.shop==="string" && fs.shop.trim().startsWith("data:image/")
   ? `<img src="${fs.shop.trim()}" style="width:35px;height:35px;object-fit:contain;vertical-align:middle">`
   : `<b>🛒 Belanja</b>`}<button class="btn light" onclick="showBuyerOrders()">📦 Pesanan</button><button class="btn light" onclick="landing()">Keluar</button></div><div class="page"><input id="search" class="input" placeholder="🔎 Cari sayuran..." oninput="renderShop()"><select id="branchFilter" class="input" onchange="changeBuyerBranch(this.value)">${branches.map(b=>`<option value="${b.id}" ${String(b.id)===String(currentBranchId)?"selected":""}>🏪 ${b.name}</option>`).join("")}</select><select id="catFilter" class="input" onchange="renderShop()"><option value="">📂 Semua kategori</option>${[...new Set(products.map(p=>p.category).filter(Boolean))].sort().map(c=>`<option value="${c}">${c}</option>`).join("")}</select><div class="panel"><b>🎁 Paket Serba 5K</b><br><small>Pilih produk yang tersedia dalam paket Rp5.000.</small></div><div id="shopProducts" class="product-grid"></div></div><div class="bottom"><div>🛒 <b id="cartCount">0</b> item · <b id="cartTotal">Rp0</b></div><button class="btn green" onclick="openCart()">Checkout</button></div>`;renderShop()}
 async function changeBuyerBranch(id){currentBranchId=id;await loadOnlineData();renderShop()}
