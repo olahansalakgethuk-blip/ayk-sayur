@@ -58,6 +58,8 @@ function saveFrontSettings(){
     bg: document.getElementById("frontBg")
   };
 
+  const taglineInput = document.getElementById("frontTagline");
+
   const old = JSON.parse(
     localStorage.getItem("aykFrontSettings") || "{}"
   );
@@ -66,8 +68,13 @@ function saveFrontSettings(){
     logo: old.logo || "",
     profile: old.profile || "",
     shop: old.shop || "",
-    bg: old.bg || ""
+    bg: old.bg || "",
+    tagline: old.tagline || "Sayur Segar, Belanja Praktis"
   };
+
+  files.tagline =
+    taglineInput?.value.trim() ||
+    "Sayur Segar, Belanja Praktis";
 
   const keys = Object.keys(inputs);
   let index = 0;
@@ -114,7 +121,8 @@ function saveFrontSettings(){
   }
 
   next();
-}function mapProduct(r){return {id:r.id,name:r.nama,price:Number(r.harga||0),cost:Number(r.modal||0),stock:Number(r.stock||0),emoji:r.emoji||"🥦",unit:r.satuan||"kg",package5k:r.paket5k_aktif!==false,packageUnit:r.paket5k_satuan||((r.satuan||"").toLowerCase()==="ikat"?"ikat":((r.satuan||"").toLowerCase()==="kg"?"250 gram":"1 paket")),category:r.kategori||"",foto:r.foto||"",aktif:r.aktif!==false,basePrice:Number(r.harga||0),baseStock:Number(r.stock||0)}}
+}
+  function mapProduct(r){return {id:r.id,name:r.nama,price:Number(r.harga||0),cost:Number(r.modal||0),stock:Number(r.stock||0),emoji:r.emoji||"🥦",unit:r.satuan||"kg",package5k:r.paket5k_aktif!==false,packageUnit:r.paket5k_satuan||((r.satuan||"").toLowerCase()==="ikat"?"ikat":((r.satuan||"").toLowerCase()==="kg"?"250 gram":"1 paket")),category:r.kategori||"",foto:r.foto||"",aktif:r.aktif!==false,basePrice:Number(r.harga||0),baseStock:Number(r.stock||0)}}
 async function loadOnlineData(){
   if(!sbReady){toast("Mode lokal: Supabase belum diisi");return;}
   try{
@@ -288,6 +296,9 @@ function adminPage(which,btn){
 
 
 <div class="panel"><b>🎨 Pengaturan Tampilan Depan</b>
+<label>Slogan / Tulisan Depan</label>
+<input id="frontTagline" class="input" type="text" value="${fs.tagline||"Sayur Segar, Belanja Praktis"}" placeholder="Sayur Segar, Belanja Praktis">
+
 <input id="frontLogo" class="input" type="file" accept="image/*">
 <input id="frontProfile" class="input" type="file" accept="image/*">
 <input id="frontShop" class="input" type="file" accept="image/*">
