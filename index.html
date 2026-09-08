@@ -51,49 +51,70 @@ async function applyBranchView(){await loadBranchOverrides(currentBranchId); pro
 
 
 function saveFrontSettings(){
-  const logoInput = document.getElementById("frontLogo");
-
-  const saveSettings = (logo) => {
-    const old = JSON.parse(
-      localStorage.getItem("aykFrontSettings") || "{}"
-    );
-
-    const s = {
-      logo: logo || old.logo || "",
-      profile: old.profile || "👤",
-      shop: old.shop || "🛒",
-      bg: old.bg || ""
-    };
-
-    localStorage.setItem("aykFrontSettings", JSON.stringify(s));
-    fs = s;
-
-    toast("Logo depan berhasil disimpan");
-
-    setTimeout(() => {
-      landing();
-    }, 300);
+  const inputs = {
+    logo: document.getElementById("frontLogo"),
+    profile: document.getElementById("frontProfile"),
+    shop: document.getElementById("frontShop"),
+    bg: document.getElementById("frontBg")
   };
 
-  if (logoInput && logoInput.files && logoInput.files[0]) {
-    const file = logoInput.files[0];
+  const old = JSON.parse(
+    localStorage.getItem("aykFrontSettings") || "{}"
+  );
 
-    if (!file.type.startsWith("image/")) {
-      return toast("File logo harus berupa gambar");
+  const files = {
+    logo: old.logo || "",
+    profile: old.profile || "",
+    shop: old.shop || "",
+    bg: old.bg || ""
+  };
+
+  const keys = Object.keys(inputs);
+  let index = 0;
+
+  function next(){
+    if(index >= keys.length){
+      localStorage.setItem(
+        "aykFrontSettings",
+        JSON.stringify(files)
+      );
+
+      fs = files;
+
+      toast("Tampilan depan berhasil disimpan");
+
+      setTimeout(() => {
+        landing();
+      }, 300);
+
+      return;
+    }
+
+    const key = keys[index++];
+    const input = inputs[key];
+    const file = input?.files?.[0];
+
+    if(!file){
+      next();
+      return;
+    }
+
+    if(!file.type.startsWith("image/")){
+      return toast("File "+key+" harus berupa gambar");
     }
 
     const reader = new FileReader();
 
     reader.onload = function(e){
-      saveSettings(e.target.result);
+      files[key] = e.target.result;
+      next();
     };
 
     reader.readAsDataURL(file);
-  } else {
-    saveSettings("");
   }
-}
-function mapProduct(r){return {id:r.id,name:r.nama,price:Number(r.harga||0),cost:Number(r.modal||0),stock:Number(r.stock||0),emoji:r.emoji||"🥦",unit:r.satuan||"kg",package5k:r.paket5k_aktif!==false,packageUnit:r.paket5k_satuan||((r.satuan||"").toLowerCase()==="ikat"?"ikat":((r.satuan||"").toLowerCase()==="kg"?"250 gram":"1 paket")),category:r.kategori||"",foto:r.foto||"",aktif:r.aktif!==false,basePrice:Number(r.harga||0),baseStock:Number(r.stock||0)}}
+
+  next();
+}function mapProduct(r){return {id:r.id,name:r.nama,price:Number(r.harga||0),cost:Number(r.modal||0),stock:Number(r.stock||0),emoji:r.emoji||"🥦",unit:r.satuan||"kg",package5k:r.paket5k_aktif!==false,packageUnit:r.paket5k_satuan||((r.satuan||"").toLowerCase()==="ikat"?"ikat":((r.satuan||"").toLowerCase()==="kg"?"250 gram":"1 paket")),category:r.kategori||"",foto:r.foto||"",aktif:r.aktif!==false,basePrice:Number(r.harga||0),baseStock:Number(r.stock||0)}}
 async function loadOnlineData(){
   if(!sbReady){toast("Mode lokal: Supabase belum diisi");return;}
   try{
