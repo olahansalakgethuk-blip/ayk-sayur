@@ -210,7 +210,7 @@ function adminPage(which,btn){
 <input id="frontBg" class="input" type="file" accept="image/*"><button class="btn green full" onclick="saveFrontSettings()">Simpan Tampilan</button>
 </div>    
     <div class="panel"><b>➕ Tambah Produk</b><input id="nn" class="input" placeholder="Nama"><input id="np" class="input" type="number" placeholder="Harga jual"><input id="nc" class="input" type="number" placeholder="Harga modal"><input id="ns" class="input" type="number" placeholder="Stok"><input id="nu" class="input" value="kg" placeholder="Satuan"><label><input id="npack" type="checkbox" checked> Aktifkan Paket 5K</label><input id="npu" class="input" value="250 gram" placeholder="Isi Paket 5K"><button class="btn green full" onclick="newProd()">+ Tambah Produk</button></div>
-    ${products.map(p=>`<div class="panel"><b>${p.emoji||"🥦"} ${p.name}</b>${p.foto?'<div style="margin:8px 0"><img src="'+p.foto+'" alt="'+p.name+'" style="width:110px;height:80px;object-fit:cover;border-radius:10px;border:1px solid #ddd"></div>':'<div style="margin:8px 0;color:#888;font-size:12px">Belum ada foto</div>'}<input id="p${p.id}" class="input" type="number" value="${p.price}"><input id="s${p.id}" class="input" type="number" value="${p.stock}"><label><input id="pack${p.id}" type="checkbox" ${p.package5k?"checked":""}> Paket 5K aktif</label><input id="pu${p.id}" class="input" value="${p.packageUnit||"250 gram"}" placeholder="Isi Paket 5K"><label style="display:block;margin-top:8px"><b>📷 Foto produk</b></label><input id="foto${p.id}" class="input" type="file" accept="image/*"><button class="btn light full" onclick="uploadProductPhoto(${p.id})">📤 Upload Foto ke Supabase</button><br><button class="btn green" onclick="upd(${p.id})">Simpan</button> <button class="btn red" onclick="del(${p.id})">Hapus</button></div>`).join("")}`;
+    ${products.map(p=>`<div class="panel"><b>${p.emoji||"🥦"} ${p.name}</b>${p.foto?'<div style="margin:8px 0"><img src="'+p.foto+'" alt="'+p.name+'" style="width:110px;height:80px;object-fit:cover;border-radius:10px;border:1px solid #ddd"></div>':'<div style="margin:8px 0;color:#888;font-size:12px">Belum ada foto</div>'}<input id="p${p.id}" class="input" type="number" value="${p.price}"><input id="s${p.id}" class="input" type="number" value="${p.stock}"><label><input id="pack${p.id}" type="checkbox" ${p.package5k?"checked":""}> Paket 5K aktif</label><input id="pu${p.id}" class="input" value="${p.packageUnit||"250 gram"}" placeholder="Isi Paket 5K"><label style="display:block;margin-top:8px"><b>📷 Foto produk</b></label><input id="foto${p.id}" class="input" type="file" accept="image/*"><button class="btn light full" onclick="uploadProductPhoto(${p.id})">📤 Upload Foto ke Supabase</button><br><button class="btn red full" onclick="deleteProductPhoto(${p.id})">🗑️ Hapus Foto</button><br><button class="btn green" onclick="upd(${p.id})">Simpan</button> <button class="btn red" onclick="del(${p.id})">Hapus</button></div>`).join("")}`;
   }else if(which==="branches"){
     const non=branches.filter(b=>b.id!=="pusat");
     c.innerHTML=`<h2>🏪 Manajemen Cabang</h2><div class="panel"><b>➕ Tambah Cabang</b><input id="bnm" class="input" placeholder="Nama cabang"><input id="bad" class="input" placeholder="Alamat cabang"><input id="bpass" class="input" type="password" placeholder="Password admin cabang (min. 6)"><button class="btn green full" onclick="addBranch()">Tambah Cabang</button></div><div class="panel"><b>Cabang Terdaftar</b>${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br><button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button> <button class="btn light" onclick="changeBranchPassword('${b.id}')">🔐 Password</button> <button class="btn red" onclick="removeBranch('${b.id}')">Hapus</button></div>`).join("")||"<p>Belum ada cabang.</p>"}</div><div id="branchManage"></div>`;
@@ -226,7 +226,44 @@ async function removeBranch(id){if(!confirm("Hapus cabang ini?"))return;try{if(s
 async function changeBranchPassword(id){let np=prompt("Password baru untuk "+branchName(id)+" (minimal 6 karakter):");if(np===null)return;if(np.length<6)return toast("Password minimal 6 karakter");try{if(sbReady){let {error}=await sb.from("admin_cabang").update({password:np}).eq("cabang_id",id);if(error)throw error;}let a=branchAdmins.filter(x=>x.branchId!==id);a.push({branchId:id,password:np});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Password cabang berhasil diubah")}catch(e){toast("Gagal ubah password: "+e.message)}}
 async function manageBranch(id){currentBranchId=id;await loadBranchOverrides(id);let box=document.getElementById("branchManage");if(!box)return;box.innerHTML=`<div class="panel"><h3>⚙️ Harga & Stok: ${branchName(id)}</h3><p><small>Kosongkan harga khusus untuk mengikuti harga pusat. Stok cabang wajib diisi.</small></p>${products.map(p=>{let ov=branchOverrides[String(p.id)]||{};return `<div style="border-top:1px solid #eee;padding:10px 0"><b>${p.name}</b><input id="bp_${p.id}" class="input" type="number" value="${ov.price??""}" placeholder="Harga khusus (kosong = harga pusat ${p.basePrice??p.price})"><input id="bs_${p.id}" class="input" type="number" value="${ov.stock??0}" placeholder="Stok cabang"><button class="btn green" onclick="saveBranchProduct('${id}',${p.id})">Simpan</button></div>`}).join("")}</div>`}
 async function saveBranchProduct(branchId,pid){let priceEl=document.getElementById("bp_"+pid),stockEl=document.getElementById("bs_"+pid);let price=priceEl.value.trim()===""?null:+priceEl.value,stock=+stockEl.value;if(stock<0)return toast("Stok tidak boleh negatif");try{if(sbReady){let {error}=await sb.from("produk_cabang").upsert({cabang_id:branchId,produk_id:pid,harga_khusus:price,stock},{onConflict:"cabang_id,produk_id"});if(error)throw error;}branchOverrides[String(pid)]={price,stock};toast("Harga & stok cabang disimpan")}catch(e){toast("Gagal simpan cabang: "+e.message)}}
-function renderAdminReport(c){
+async function deleteProductPhoto(id){
+  if(adminMode!=="pusat") return toast("Hapus foto dilakukan oleh Admin Pusat");
+  if(!sbReady) return toast("Supabase belum tersambung");
+
+  const p=products.find(x=>x.id==id);
+  if(!p || !p.foto) return toast("Produk ini belum memiliki foto");
+
+  if(!confirm("Hapus foto produk ini?")) return;
+
+  try{
+    const marker="/storage/v1/object/public/produk/";
+    let path="";
+
+    try{
+      const u=new URL(p.foto);
+      const idx=u.pathname.indexOf(marker);
+      if(idx>=0){
+        path=decodeURIComponent(u.pathname.slice(idx+marker.length));
+      }
+    }catch(e){}
+
+    if(path){
+      const {error}=await sb.storage.from("produk").remove([path]);
+      if(error) throw error;
+    }
+
+    p.foto="";
+    await syncProduct(p);
+
+    save();
+    adminApp();
+    toast("Foto produk berhasil dihapus");
+  }catch(e){
+    console.error(e);
+    toast("Gagal hapus foto: "+e.message);
+  }
+}
+  function renderAdminReport(c){
   const rows={};
   orders.filter(o=>adminMode==="pusat"||String(o.branchId||"pusat")===String(currentBranchId)).forEach(o=>{
     (o.items||[]).forEach(i=>{
