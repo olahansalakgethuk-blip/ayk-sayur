@@ -52,22 +52,23 @@ async function applyBranchView(){await loadBranchOverrides(currentBranchId); pro
 
 function saveFrontSettings(){
   const logoInput = document.getElementById("frontLogo");
-  const profile = document.getElementById("frontProfile").value.trim();
-  const shop = document.getElementById("frontShop").value.trim();
-  const bg = document.getElementById("frontBg").value.trim();
 
   const saveSettings = (logo) => {
+    const old = JSON.parse(
+      localStorage.getItem("aykFrontSettings") || "{}"
+    );
+
     const s = {
-      logo: logo || "",
-      profile: profile || "👤",
-      shop: shop || "🛒",
-      bg: bg || ""
+      logo: logo || old.logo || "",
+      profile: old.profile || "👤",
+      shop: old.shop || "🛒",
+      bg: old.bg || ""
     };
 
     localStorage.setItem("aykFrontSettings", JSON.stringify(s));
     fs = s;
 
-    toast("Tampilan depan berhasil disimpan");
+    toast("Logo depan berhasil disimpan");
 
     setTimeout(() => {
       landing();
@@ -89,14 +90,9 @@ function saveFrontSettings(){
 
     reader.readAsDataURL(file);
   } else {
-    const old = JSON.parse(
-      localStorage.getItem("aykFrontSettings") || "{}"
-    );
-
-    saveSettings(old.logo || "");
+    saveSettings("");
   }
-}  
-
+}
 function mapProduct(r){return {id:r.id,name:r.nama,price:Number(r.harga||0),cost:Number(r.modal||0),stock:Number(r.stock||0),emoji:r.emoji||"🥦",unit:r.satuan||"kg",package5k:r.paket5k_aktif!==false,packageUnit:r.paket5k_satuan||((r.satuan||"").toLowerCase()==="ikat"?"ikat":((r.satuan||"").toLowerCase()==="kg"?"250 gram":"1 paket")),category:r.kategori||"",foto:r.foto||"",aktif:r.aktif!==false,basePrice:Number(r.harga||0),baseStock:Number(r.stock||0)}}
 async function loadOnlineData(){
   if(!sbReady){toast("Mode lokal: Supabase belum diisi");return;}
