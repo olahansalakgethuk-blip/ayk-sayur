@@ -160,9 +160,36 @@ async function insertProduct(p){if(!sbReady)return;const {data,error}=await sb.f
 async function syncOrder(o){if(!sbReady)return;const {error}=await sb.from("pesanan").insert({id:o.id,nama_pelanggan:o.name,whatsapp:o.phone,alamat:o.address,latitude:o.latitude,longitude:o.longitude,subtotal:o.subtotal,ongkir:o.shipping,zona:o.shippingZone,total:o.total,profit:o.profit,metode_pembayaran:o.payment,status:o.status,bukti_pembayaran:o.proof||"",items:o.items,cabang_id:o.branchId||"pusat",cabang_nama:o.branchName||branchName(o.branchId||"pusat")});if(error)throw error}
 async function syncOrderStatus(id,status){if(!sbReady)return;const {error}=await sb.from("pesanan").update({status}).eq("id",id);if(error)throw error}
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1300)}
-function landing(){role=null;let fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");document.getElementById("app").innerHTML=`<header style="background:${fs.bg || ""}">
-<h1>${fs.logo && fs.logo.startsWith("data:image/") ? `<img src="${fs.logo}" style="width:150px;height:150px;object-fit:contain">` : (fs.logo || "🥬 AYK SAYUR")}</h1>
+function landing(){
+  role=null;
+
+  let fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");
+
+  const logoView =
+    fs.logo && fs.logo.startsWith("data:image/")
+      ? `<img src="${fs.logo}" style="width:150px;height:150px;object-fit:contain">`
+      : (fs.logo || "🥬 AYK SAYUR");
+
+  const profileView =
+    fs.profile && fs.profile.startsWith("data:image/")
+      ? `<img src="${fs.profile}" style="width:55px;height:55px;object-fit:contain;border-radius:12px">`
+      : (fs.profile || "👤");
+
+  const shopView =
+    fs.shop && fs.shop.startsWith("data:image/")
+      ? `<img src="${fs.shop}" style="width:55px;height:55px;object-fit:contain;border-radius:12px">`
+      : (fs.shop || "🛒");
+
+  const bgStyle =
+    fs.bg && fs.bg.startsWith("data:image/")
+      ? `background-image:url("${fs.bg}");background-size:cover;background-position:center;`
+      : `background:${fs.bg || ""};`;
+
+  document.getElementById("app").innerHTML=`
+<header style="${bgStyle}">
+<h1>${logoView}</h1>
 <p>${fs.tagline || "Sayur Segar, Belanja Praktis"}</p>
+
 <div style="background:#fff;border-radius:16px;padding:12px;margin-top:15px;text-align:center">
 <img src="AYK_SAYUR_QR_KONSUMEN.png.png" alt="QR AYK SAYUR" style="width:180px;height:180px;object-fit:contain">
 <div style="color:#287a3d;font-weight:bold;margin-top:8px">📱 Scan untuk Belanja</div>
@@ -176,8 +203,23 @@ function landing(){role=null;let fs=JSON.parse(localStorage.getItem("aykFrontSet
 <small style="color:#555">Buka lalu pilih Instal Aplikasi</small>
 </div>
 
-<div class="page role"><h2>Masuk sebagai</h2><div class="role-card" onclick="buyerLogin()"><div class="role-icon">${fs.profile || "👤"}</div><b>PEMBELI</b><small>Belanja sayuran dan lihat pesanan</small></div><div class="role-card" onclick="adminLogin()"><div class="role-icon">🔐</div><b>ADMIN</b><small>Kelola produk, stok, paket & transaksi</small></div></div>`}
-function buyerLogin(){role="buyer";buyerApp()}
+<div class="page role">
+<h2>Masuk sebagai</h2>
+
+<div class="role-card" onclick="buyerLogin()">
+<div class="role-icon">${profileView}</div>
+<b>PEMBELI</b>
+<small>Belanja sayuran dan lihat pesanan</small>
+</div>
+
+<div class="role-card" onclick="adminLogin()">
+<div class="role-icon">🔐</div>
+<b>ADMIN</b>
+<small>Kelola produk, stok, paket & transaksi</small>
+</div>
+
+</div>`;
+}
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
 function adminLogin(){document.getElementById("app").innerHTML=`<header><h1>🥬 AYK SAYUR</h1><p>Login Administrator</p></header><div class="page login"><h2>🔐 Masuk Admin</h2><label>Jenis Admin</label><select id="adminType" class="input" onchange="toggleBranchLogin()"><option value="pusat">Admin Pusat</option><option value="cabang">Admin Cabang</option></select><div id="branchLoginBox" style="display:none"><label>Pilih Cabang</label><select id="loginBranch" class="input">${branches.filter(b=>b.id!=="pusat").map(b=>`<option value="${b.id}">${b.name}</option>`).join("")||`<option value="">Belum ada cabang</option>`}</select></div><label>Password admin</label><div style="display:flex;gap:6px"><input id="adminPass" class="input" style="flex:1" type="password" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')checkAdmin()"><button class="btn light" type="button" onclick="togglePwd('adminPass',this)">👁️</button></div><button class="btn green full" onclick="checkAdmin()">Masuk</button><button class="btn light full" style="margin-top:8px" onclick="landing()">← Kembali</button><p style="font-size:12px;color:#777">Password Admin Pusat awal: <b>1234</b>.</p></div>`;toggleBranchLogin()}
 function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
