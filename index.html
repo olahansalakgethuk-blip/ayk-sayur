@@ -486,9 +486,13 @@ async function loadMyCourierOrders(){
         <p>💰 Ongkir: <b>${rp(o.shipping||0)}</b></p>
         <p>💵 Bagian kurir: <b>${rp(Math.max(0,(o.shipping||0)-1000))}</b></p>
         <p>📌 Status: <b>${o.courierStatus||"diambil"}</b></p>
-        ${(o.courierStatus||"diambil")==="diambil" ? `
+       ${(o.courierStatus||"diambil")==="diambil" ? `
 <button class="btn green full" onclick="startCourierDelivery('${o.id}')">
   🚚 Antar Pesanan
+</button>
+` : (o.courierStatus||"")==="diantar" ? `
+<button class="btn green full" onclick="finishCourierOrder('${o.id}')">
+  ✅ Selesai
 </button>
 ` : ""}
       </div>
