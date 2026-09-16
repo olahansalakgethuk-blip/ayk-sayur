@@ -593,6 +593,7 @@ async function checkCourier(){
 }
 function changeAdminPassword(){let old=document.getElementById("oldAdminPass").value,newp=document.getElementById("newAdminPass").value,conf=document.getElementById("confirmAdminPass").value;if(old!==getAdminPassword())return toast("Password lama salah");if(newp.length<6)return toast("Password baru minimal 6 karakter");if(newp!==conf)return toast("Konfirmasi password tidak sama");localStorage.setItem("aykAdminPassword",newp);toast("Password admin berhasil diganti");document.getElementById("oldAdminPass").value="";document.getElementById("newAdminPass").value="";document.getElementById("confirmAdminPass").value=""}
 function buyerLogin(){
+  alert("Tombol PEMBELI terpanggil");
   role="buyer";
   buyerApp();
 }
