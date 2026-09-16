@@ -519,6 +519,21 @@ async function startCourierDelivery(id){
     toast("Gagal mengubah status: "+e.message);
   }
 }
+async function finishCourierOrder(id){
+  try{
+    await syncCourierOrder(
+      id,
+      currentCourierId,
+      currentCourierName,
+      "selesai"
+    );
+
+    toast("Pesanan selesai");
+    await loadMyCourierOrders();
+  }catch(e){
+    toast("Gagal menyelesaikan pesanan: "+e.message);
+  }
+}
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
 function courierLogin(){
   document.getElementById("app").innerHTML=`
