@@ -557,6 +557,12 @@ function courierLogin(){
         `).join("") || `<option value="">Belum ada kurir</option>`}
       </select>
 
+      <label style="display:block;margin-top:12px">Password</label>
+      <input id="courierPassword"
+             class="input"
+             type="password"
+             placeholder="Masukkan password">
+
       <button class="btn green full" onclick="checkCourier()">
         Masuk
       </button>
@@ -566,14 +572,19 @@ function courierLogin(){
       </button>
     </div>
   `;
-}
-function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
+}function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
 function checkAdmin(){let type=document.getElementById("adminType").value; if(type==="pusat"){if(document.getElementById("adminPass").value===getAdminPassword()){role="admin";adminMode="pusat";currentBranchId="pusat";adminApp()}else toast("Password salah")}else{let id=document.getElementById("loginBranch").value,pass=document.getElementById("adminPass").value;let u=branchAdmins.find(x=>String(x.branchId)===String(id))||JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));if(u&&u.password===pass){role="admin";adminMode="cabang";currentBranchId=id;adminApp()}else toast("Password cabang salah")}}
 async function checkCourier(){
   let id=document.getElementById("courierSelect").value;
+  let password=document.getElementById("courierPassword").value;
 
   if(!id){
     toast("Kurir belum tersedia");
+    return;
+  }
+
+  if(!password){
+    toast("Password wajib diisi");
     return;
   }
 
@@ -581,6 +592,11 @@ async function checkCourier(){
 
   if(!courier){
     toast("Data kurir tidak ditemukan");
+    return;
+  }
+
+  if(String(courier.password||"")!==String(password)){
+    toast("Password kurir salah");
     return;
   }
 
