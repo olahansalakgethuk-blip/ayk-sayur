@@ -207,6 +207,19 @@ async function syncOrder(o){
   if(error)throw error;
 }
 async function syncOrderStatus(id,status){if(!sbReady)return;const {error}=await sb.from("pesanan").update({status}).eq("id",id);if(error)throw error}
+async function syncCourierOrder(id,courierId,courierName,statusKurir){
+  if(!sbReady)return;
+
+  const {error}=await sb.from("pesanan")
+    .update({
+      kurir_id:courierId,
+      kurir_nama:courierName,
+      status_kurir:statusKurir
+    })
+    .eq("id",id);
+
+  if(error)throw error;
+}
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1300)}
 let aykDeferredInstallPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();aykDeferredInstallPrompt=e;});
@@ -323,6 +336,87 @@ function courierApp(){
   `;
 
   loadCourierOrders();
+}
+async function loadCourierOrders(){
+  let c=document.getElementById("courierContent");
+  if(!c)return;
+
+  if(sbReady){
+    const {data,error}=await sb.from("pesanan")
+      .select("*")
+      .eq("status_kurir","menunggu_kurir")
+      .order("created_at",{ascending:false});
+
+    if(error){
+      c.innerHTML=`<div class="panel">Gagal mengambil pesanan: ${error.message}</div>`;
+      return;
+    }
+
+    orders=(data||[]).map(o=>({
+      id:o.id,
+      date:o.created_at?new Date(o.created_at).toLocaleString("id-ID"):"",
+      name:o.nama_pelanggan,
+      phone:o.whatsapp,
+      address:o.alamat,
+      subtotal:Number(o.subtotal||0),
+      shipping:Number(o.ongkir||0),
+      shippingZone:o.zona,
+      total:Number(o.total||0),
+      profit:Number(o.profit||0),
+      items:o.items||[],
+      payment:o.metode_pembayaran,
+      status:o.status,
+      proof:o.bukti_pembayaran||"",
+      branchId:o.cabang_id||"pusat",
+      branchName:o.cabang_nama||branchName(o.cabang_id||"pusat"),
+      latitude:Number(o.latitude)||null,
+      longitude:Number(o.longitude)||null,
+      courierId:o.kurir_id||null,
+      courierName:o.kurir_nama||"",
+      courierStatus:o.status_kurir||"menunggu_kurir"
+    }));
+  }
+
+  let available=orders.filter(o=>
+    !o.courierId &&
+    (o.courierStatus||"menunggu_kurir")==="menunggu_kurir"
+  );
+
+  if(!available.length){
+    c.innerHTML=`<div class="panel"><b>📦 Belum ada pesanan</b><p>Belum ada pesanan yang bisa diambil.</p></div>`;
+    return;
+  }
+
+  c.innerHTML=available.map(o=>`
+    <div class="panel">
+      <b>🧾 Pesanan ${o.id}</b>
+      <p>👤 ${o.name||""}</p>
+      <p>📍 ${o.address||""}</p>
+      <p>💰 Ongkir: <b>${rp(o.shipping||0)}</b></p>
+      <p>💵 Bagian kurir: <b>${rp(Math.max(0,(o.shipping||0)-1000))}</b></p>
+      <button class="btn green full" onclick="takeCourierOrder('${o.id}')">
+        🟢 Ambil Pesanan
+      </button>
+    </div>
+  `).join("");
+}
+async function takeCourierOrder(id){
+  let o=orders.find(x=>String(x.id)===String(id));
+  if(!o)return;
+
+  try{
+    await syncCourierOrder(
+      id,
+      currentCourierId,
+      currentCourierName,
+      "diambil"
+    );
+
+    toast("Pesanan berhasil diambil");
+    await loadCourierOrders();
+  }catch(e){
+    toast("Gagal mengambil pesanan: "+e.message);
+  }
 }
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
 function courierLogin(){
