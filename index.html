@@ -346,7 +346,81 @@ function adminPage(which,btn){
 <input id="frontBg" class="input" type="file" accept="image/*"><button class="btn green full" onclick="saveFrontSettings()">Simpan Tampilan</button>
 </div>    
     <div class="panel"><b>➕ Tambah Produk</b><input id="nn" class="input" placeholder="Nama"><input id="np" class="input" type="number" placeholder="Harga jual"><input id="nc" class="input" type="number" placeholder="Harga modal"><input id="ns" class="input" type="number" placeholder="Stok"><input id="nu" class="input" value="kg" placeholder="Satuan"><label><input id="npack" type="checkbox" checked> Aktifkan Paket 5K</label><input id="npu" class="input" value="250 gram" placeholder="Isi Paket 5K"><button class="btn green full" onclick="newProd()">+ Tambah Produk</button></div>
-    ${products.map(p=>`<div class="panel"><b>${p.emoji||"🥦"} ${p.name}</b>${p.foto?'<div style="margin:8px 0"><img src="'+p.foto+'" alt="'+p.name+'" style="width:110px;height:80px;object-fit:cover;border-radius:10px;border:1px solid #ddd"></div>':'<div style="margin:8px 0;color:#888;font-size:12px">Belum ada foto</div>'}<input id="p${p.id}" class="input" type="number" value="${p.price}"><input id="s${p.id}" class="input" type="number" value="${p.stock}"><label><input id="pack${p.id}" type="checkbox" ${p.package5k?"checked":""}> Paket 5K aktif</label><input id="pu${p.id}" class="input" value="${p.packageUnit||"250 gram"}" placeholder="Isi Paket 5K"><label style="display:block;margin-top:8px"><b>📷 Foto produk</b></label><input id="foto${p.id}" class="input" type="file" accept="image/*"><button class="btn light full" onclick="uploadProductPhoto(${p.id})">📤 Upload Foto ke Supabase</button><br><button class="btn red full" onclick="deleteProductPhoto(${p.id})">🗑️ Hapus Foto</button><br><button class="btn green" onclick="upd(${p.id})">Simpan</button> <button class="btn red" onclick="del(${p.id})">Hapus</button></div>`).join("")}`;
+    ${products.map(p=>{
+  let operPct=p.operPct ?? 10;
+  let reservePct=p.reservePct ?? 5;
+  let profitPct=p.profitPct ?? 10;
+  let adjust=p.priceAdjust ?? 0;
+
+  let modal=p.cost||0;
+  let oper=modal*operPct/100;
+  let reserve=modal*reservePct/100;
+  let profit=modal*profitPct/100;
+  let calc=Math.round(modal+oper+reserve+profit);
+  let appPrice=calc+adjust;
+
+  return `<div class="panel">
+<b>${p.emoji||"🥦"} ${p.name}</b>
+
+${p.foto?'<div style="margin:8px 0"><img src="'+p.foto+'" alt="'+p.name+'" style="width:110px;height:80px;object-fit:cover;border-radius:10px;border:1px solid #ddd"></div>':'<div style="margin:8px 0;color:#888;font-size:12px">Belum ada foto</div>'}
+
+<label>💰 Harga Modal</label>
+<input class="input" type="number" value="${modal}" readonly>
+
+<label>⚙️ Operasional (%)</label>
+<input id="oper${p.id}" class="input" type="number" value="${operPct}" oninput="recalcPrice(${p.id})">
+
+<label>🛡️ Cadangan / Kerusakan (%)</label>
+<input id="reserve${p.id}" class="input" type="number" value="${reservePct}" oninput="recalcPrice(${p.id})">
+
+<label>📈 Keuntungan (%)</label>
+<input id="profit${p.id}" class="input" type="number" value="${profitPct}" oninput="recalcPrice(${p.id})">
+
+<label>🧮 Harga Jual Perhitungan</label>
+<input id="calc${p.id}" class="input" type="number" value="${calc}" readonly>
+
+<label>➕ Penyesuaian Harga Aplikasi (+ / -)</label>
+<input id="adjust${p.id}" class="input" type="number" value="${adjust}" placeholder="Contoh: 500 atau -500" oninput="recalcPrice(${p.id})">
+
+<label>🏷️ Harga Jual Aplikasi</label>
+<input id="p${p.id}" class="input" type="number" value="${appPrice}" readonly>
+
+<label>📦 Stok</label>
+<input id="s${p.id}" class="input" type="number" value="${p.stock}">
+
+<label>
+<input id="pack${p.id}" type="checkbox" ${p.package5k?"checked":""}>
+Paket 5K aktif
+</label>
+
+<input id="pu${p.id}" class="input" value="${p.packageUnit||"250 gram"}" placeholder="Isi Paket 5K">
+
+<label style="display:block;margin-top:8px"><b>📷 Foto produk</b></label>
+
+<input id="foto${p.id}" class="input" type="file" accept="image/*">
+
+<button class="btn light full" onclick="uploadProductPhoto(${p.id})">
+📤 Upload Foto ke Supabase
+</button>
+
+<br>
+
+<button class="btn red full" onclick="deleteProductPhoto(${p.id})">
+🗑️ Hapus Foto
+</button>
+
+<br>
+
+<button class="btn green" onclick="upd(${p.id})">
+Simpan
+</button>
+
+<button class="btn red" onclick="del(${p.id})">
+Hapus
+</button>
+
+</div>`;
+}).join("")}`;
   }else if(which==="branches"){
     const non=branches.filter(b=>b.id!=="pusat");
     c.innerHTML=`<h2>🏪 Manajemen Cabang</h2><div class="panel"><b>➕ Tambah Cabang</b><input id="bnm" class="input" placeholder="Nama cabang"><input id="bad" class="input" placeholder="Alamat cabang"><input id="blat" class="input" type="number" step="any" placeholder="Latitude cabang"><input id="blon" class="input" type="number" step="any" placeholder="Longitude cabang"><small>Koordinat dipakai sebagai titik awal ongkir otomatis.</small><input id="bpass" class="input" type="password" placeholder="Password admin cabang (min. 6)"><button class="btn green full" onclick="addBranch()">Tambah Cabang</button></div><div class="panel"><b>Cabang Terdaftar</b>${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br><button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button> <button class="btn light" onclick="changeBranchPassword('${b.id}')">🔐 Password</button> <button class="btn red" onclick="removeBranch('${b.id}')">Hapus</button></div>`).join("")||"<p>Belum ada cabang.</p>"}</div><div id="branchManage"></div>`;
@@ -525,7 +599,56 @@ async function setStatus(id,status){
   }
   adminPage("orders",document.querySelectorAll(".tab")[2]);
 }
-async function upd(id){let p=products.find(x=>x.id==id);p.price=+document.getElementById("p"+id).value;p.stock=+document.getElementById("s"+id).value;p.package5k=document.getElementById("pack"+id).checked;p.packageUnit=document.getElementById("pu"+id).value.trim()||"250 gram";try{await syncProduct(p);save();toast("Produk & paket diperbarui")}catch(e){toast("Gagal update Supabase: "+e.message)}}
+async function upd(id){
+  let p=products.find(x=>x.id==id);
+  if(!p)return;
+
+  p.stock=+document.getElementById("s"+id).value;
+  p.package5k=document.getElementById("pack"+id).checked;
+  p.packageUnit=document.getElementById("pu"+id).value.trim()||"250 gram";
+
+  p.operPct=+document.getElementById("oper"+id).value||0;
+  p.reservePct=+document.getElementById("reserve"+id).value||0;
+  p.profitPct=+document.getElementById("profit"+id).value||0;
+  p.priceAdjust=+document.getElementById("adjust"+id).value||0;
+
+  let modal=p.cost||0;
+  let oper=modal*p.operPct/100;
+  let reserve=modal*p.reservePct/100;
+  let profit=modal*p.profitPct/100;
+
+  let hargaHitung=Math.round(modal+oper+reserve+profit);
+  p.price=Math.max(0,hargaHitung+p.priceAdjust);
+
+  try{
+    await syncProduct(p);
+    save();
+    toast("Produk & harga jual berhasil diperbarui");
+  }catch(e){
+    toast("Gagal update Supabase: "+e.message);
+  }
+}
+  function recalcPrice(id){
+  let p=products.find(x=>x.id==id);
+  if(!p)return;
+
+  let modal=p.cost||0;
+
+  let operPct=+document.getElementById("oper"+id).value||0;
+  let reservePct=+document.getElementById("reserve"+id).value||0;
+  let profitPct=+document.getElementById("profit"+id).value||0;
+  let adjust=+document.getElementById("adjust"+id).value||0;
+
+  let oper=modal*operPct/100;
+  let reserve=modal*reservePct/100;
+  let profit=modal*profitPct/100;
+
+  let hargaHitung=Math.round(modal+oper+reserve+profit);
+  let hargaAplikasi=Math.max(0,hargaHitung+adjust);
+
+  document.getElementById("calc"+id).value=hargaHitung;
+  document.getElementById("p"+id).value=hargaAplikasi;
+}
 async function del(id){if(adminMode!=="pusat")return toast("Admin cabang tidak dapat menghapus produk");try{if(sbReady){const {error}=await sb.from("produk").update({aktif:false}).eq("id",id);if(error)throw error}products=products.filter(p=>p.id!=id);save();adminApp();toast("Produk dihapus") }catch(e){toast("Gagal hapus online: "+e.message)}}
 async function newProd(){if(adminMode!=="pusat")return toast("Tambah produk dilakukan oleh Admin Pusat");let name=document.getElementById("nn").value.trim(),price=+document.getElementById("np").value,cost=+document.getElementById("nc").value,stock=+document.getElementById("ns").value,unit=document.getElementById("nu").value.trim()||"kg",pack=document.getElementById("npack").checked,pu=document.getElementById("npu").value.trim()||"250 gram";if(!name||!price)return toast("Nama dan harga wajib");let p={id:Date.now(),name,price,cost,stock,emoji:"🥦",unit,package5k:pack,packageUnit:pu};try{await insertProduct(p);products.push(p);save();adminApp();toast("Produk ditambahkan") }catch(e){toast("Gagal tambah Supabase: "+e.message)}}
 landing();
