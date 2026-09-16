@@ -667,43 +667,73 @@ function renderCartModal(){let ci=document.getElementById("ci");if(!ci)return;le
 function openCart(){let lines=cartLines();document.body.insertAdjacentHTML("beforeend",`<div class="modal-bg" id="cartModal"><div class="modal"><button class="close" onclick="document.getElementById('cartModal').remove()">×</button><h2>🛒 Keranjang</h2><div id="ci"></div><div id="checkoutTotal"></div><input id="bn" class="input" placeholder="Nama pelanggan"><input id="bp" class="input" placeholder="Nomor WhatsApp"><textarea id="ba" class="input" rows="3" placeholder="Alamat pengiriman"></textarea><div class="panel"><b>📍 Ongkir Otomatis</b><br><small>Ongkir dihitung otomatis berdasarkan alamat pengiriman yang Anda masukkan.</small><input id="bLat" type="hidden"><input id="bLng" type="hidden"><div id="locationInfo" style="font-size:12px;color:#555;margin-top:6px">Alamat akan digunakan untuk menghitung jarak dan ongkir.</div></div>${shipping.promoFree?`<label style="display:block;margin:8px 0"><input id="freePromo" type="checkbox" onchange="updateCheckoutTotal()"> 🎁 Gunakan Gratis Ongkir</label>`:""}<div id="shipInfo" class="panel"></div><label><b>Metode pembayaran</b></label><select id="payMethod" class="input" onchange="showPayInfo()"><option value="COD">COD — Bayar saat diterima</option><option value="TRANSFER">Transfer Bank</option><option value="QRIS">QRIS</option></select><div id="payInfo" class="panel" style="display:none"></div><label style="display:block;margin-top:8px"><b>Bukti pembayaran</b> <small>(untuk Transfer/QRIS)</small></label><input id="proof" class="input" type="file" accept="image/*"><button class="btn green full" onclick="finishOrder()">✅ Buat Pesanan</button></div></div>`);document.getElementById("cartModal").style.display="block";renderCartModal();showPayInfo();updateCheckoutTotal()} 
 async function geocodeAddress(address){
   try{
-    const queries=[
-      address+", Indonesia",
-      address,
-      address.split(",").slice(-3).join(",").trim()+", Indonesia"
-    ];
+    let parts=address
+      .split(",")
+      .map(x=>x.trim())
+      .filter(Boolean);
+
+    let queries=[];
+
+    // Alamat lengkap
+    queries.push(address+", Indonesia");
+
+    // Coba bagian-bagian alamat dari belakang
+    for(let i=0;i<parts.length;i++){
+      let q=parts.slice(i).join(", ");
+      if(q.length>=5){
+        queries.push(q+", Indonesia");
+      }
+    }
+
+    // Coba alamat tanpa nomor rumah/detail terlalu panjang
+    if(parts.length>=3){
+      queries.push(parts.slice(-3).join(", ")+", Indonesia");
+    }
+
+    if(parts.length>=2){
+      queries.push(parts.slice(-2).join(", ")+", Indonesia");
+    }
+
+    // Hilangkan duplikat
+    queries=[...new Set(queries)];
 
     for(let text of queries){
-      if(!text)continue;
+      try{
+        let url=
+          "https://nominatim.openstreetmap.org/search"+
+          "?format=jsonv2"+
+          "&limit=1"+
+          "&countrycodes=id"+
+          "&accept-language=id"+
+          "&q="+encodeURIComponent(text);
 
-      let q=encodeURIComponent(text);
+        let res=await fetch(url);
 
-      let res=await fetch(
-        "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=id&q="+q,
-        {
-          headers:{
-            "Accept":"application/json"
+        if(!res.ok)continue;
+
+        let data=await res.json();
+
+        if(data && data.length){
+          let lat=Number(data[0].lat);
+          let lon=Number(data[0].lon);
+
+          if(Number.isFinite(lat)&&Number.isFinite(lon)){
+            return {
+              lat:lat,
+              lon:lon,
+              display:data[0].display_name||text
+            };
           }
         }
-      );
-
-      if(!res.ok)continue;
-
-      let data=await res.json();
-
-      if(data&&data.length){
-        return {
-          lat:Number(data[0].lat),
-          lon:Number(data[0].lon),
-          display:data[0].display_name||address
-        };
+      }catch(err){
+        console.error("Percobaan alamat gagal:",text,err);
       }
     }
 
     return null;
 
   }catch(e){
-    console.error("Geocoding:",e);
+    console.error("Geocoding gagal:",e);
     return null;
   }
 }
