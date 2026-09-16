@@ -763,11 +763,10 @@ Hapus
     c.innerHTML=`<h2>🚚 Manajemen Kurir</h2>
     <div class="panel">
       <b>➕ Tambah Kurir</b>
-      <input id="knm" class="input" placeholder="Nama kurir">
-      <input id="kwa" class="input" placeholder="Nomor WhatsApp">
-      <button class="btn green full" onclick="addCourier()">Tambah Kurir</button>
-    </div>
-    <div class="panel">
+<input id="knm" class="input" placeholder="Nama kurir">
+<input id="kwa" class="input" placeholder="Nomor WhatsApp">
+<input id="kpass" class="input" type="password" placeholder="Password kurir">
+<button class="btn green full" onclick="addCourier()">Tambah Kurir</button>
       <b>Daftar Kurir</b>
       ${couriers.map(k=>`
         <div class="panel">
@@ -790,9 +789,15 @@ Hapus
 async function addCourier(){
   let nama=document.getElementById("knm").value.trim();
   let whatsapp=document.getElementById("kwa").value.trim();
+  let password=document.getElementById("kpass").value;
 
   if(!nama){
     toast("Nama kurir wajib diisi");
+    return;
+  }
+
+  if(password.length<6){
+    toast("Password minimal 6 karakter");
     return;
   }
 
@@ -802,6 +807,7 @@ async function addCourier(){
         .insert({
           nama:nama,
           whatsapp:whatsapp,
+          password:password,
           aktif:true
         })
         .select()
@@ -815,6 +821,7 @@ async function addCourier(){
         id:Date.now(),
         nama:nama,
         whatsapp:whatsapp,
+        password:password,
         aktif:true
       };
       couriers.push(k);
@@ -831,7 +838,7 @@ async function addCourier(){
   }
 }
 async function toggleCourier(id){
-  let k=couriers.find(x=>String(x.id)===String(id));
+let k=couriers.find(x=>String(x.id)===String(id));
   if(!k)return;
 
   let status=!k.aktif;
