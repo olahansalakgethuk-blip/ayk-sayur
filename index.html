@@ -506,17 +506,48 @@ async function loadMyCourierOrders(){
 
 async function startCourierDelivery(id){
   try{
-    await syncCourierOrder(
-      id,
-      currentCourierId,
-      currentCourierName,
-      "diantar"
-    );
+    if(sbReady){
+      const {data,error}=await sb.from("pesanan")
+        .update({
+          status_kurir:"diantar"
+        })
+        .eq("id",id)
+        .eq("kurir_id",currentCourierId)
+        .eq("status_kurir","diambil")
+        .select()
+        .maybeSingle();
 
-    toast("Pesanan sedang diantar");
+      if(error)throw error;
+
+      if(!data){
+        toast("Pesanan tidak ditemukan atau sudah berubah");
+        return;
+      }
+    }else{
+      let o=orders.find(x=>String(x.id)===String(id));
+
+      if(!o)return;
+
+      if(String(o.courierId)!==String(currentCourierId)){
+        toast("Pesanan bukan milik kurir ini");
+        return;
+      }
+
+      if((o.courierStatus||"")!=="diambil"){
+        toast("Status pesanan sudah berubah");
+        return;
+      }
+
+      o.courierStatus="diantar";
+    }
+
+    toast("🚚 Pesanan sedang diantar");
+
     await loadMyCourierOrders();
+
   }catch(e){
-    toast("Gagal mengubah status: "+e.message);
+    console.error(e);
+    toast("Gagal memulai pengiriman: "+e.message);
   }
 }
 async function finishCourierOrder(id){
