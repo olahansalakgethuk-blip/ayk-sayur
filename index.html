@@ -326,8 +326,17 @@ function courierApp(){
     </header>
 
     <div class="page">
-      <h2>📦 Pesanan Kurir</h2>
-      <div id="courierContent"></div>
+     <h2>📦 Pesanan Kurir</h2>
+
+<button class="btn green full" onclick="loadCourierOrders()">
+  📦 Pesanan Bisa Diambil
+</button>
+
+<button class="btn light full" style="margin-top:8px" onclick="loadMyCourierOrders()">
+  🚚 Pesanan Saya
+</button>
+
+<div id="courierContent"></div>
 
       <button class="btn light full" onclick="landing()">
         ← Keluar
@@ -417,6 +426,74 @@ async function takeCourierOrder(id){
   }catch(e){
     toast("Gagal mengambil pesanan: "+e.message);
   }
+}
+async function loadMyCourierOrders(){
+  let c=document.getElementById("courierContent");
+  if(!c)return;
+
+  if(sbReady){
+    const {data,error}=await sb.from("pesanan")
+      .select("*")
+      .eq("kurir_id",currentCourierId)
+      .order("created_at",{ascending:false});
+
+    if(error){
+      c.innerHTML=`<div class="panel">Gagal mengambil pesanan saya: ${error.message}</div>`;
+      return;
+    }
+
+    orders=(data||[]).map(o=>({
+      id:o.id,
+      date:o.created_at?new Date(o.created_at).toLocaleString("id-ID"):"",
+      name:o.nama_pelanggan,
+      phone:o.whatsapp,
+      address:o.alamat,
+      subtotal:Number(o.subtotal||0),
+      shipping:Number(o.ongkir||0),
+      shippingZone:o.zona,
+      total:Number(o.total||0),
+      profit:Number(o.profit||0),
+      items:o.items||[],
+      payment:o.metode_pembayaran,
+      status:o.status,
+      proof:o.bukti_pembayaran||"",
+      branchId:o.cabang_id||"pusat",
+      branchName:o.cabang_nama||branchName(o.cabang_id||"pusat"),
+      latitude:Number(o.latitude)||null,
+      longitude:Number(o.longitude)||null,
+      courierId:o.kurir_id||null,
+      courierName:o.kurir_nama||"",
+      courierStatus:o.status_kurir||"menunggu_kurir"
+    }));
+  }
+
+  let mine=orders.filter(o=>
+    String(o.courierId)===String(currentCourierId)
+  );
+
+  let html=`
+    <div class="panel">
+      <h3>🚚 Pesanan Saya</h3>
+  `;
+
+  if(!mine.length){
+    html+=`<p>Belum ada pesanan yang diambil.</p>`;
+  }else{
+    html+=mine.map(o=>`
+      <div style="border-top:1px solid #ddd;padding:12px 0">
+        <b>🧾 Pesanan ${o.id}</b>
+        <p>👤 ${o.name||""}</p>
+        <p>📍 ${o.address||""}</p>
+        <p>💰 Ongkir: <b>${rp(o.shipping||0)}</b></p>
+        <p>💵 Bagian kurir: <b>${rp(Math.max(0,(o.shipping||0)-1000))}</b></p>
+        <p>📌 Status: <b>${o.courierStatus||"diambil"}</b></p>
+      </div>
+    `).join("");
+  }
+
+  html+=`</div>`;
+
+  c.innerHTML=html;
 }
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
 function courierLogin(){
