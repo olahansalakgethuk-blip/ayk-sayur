@@ -814,6 +814,32 @@ async function addCourier(){
     toast("Gagal tambah kurir: "+e.message);
   }
 }
+async function toggleCourier(id){
+  let k=couriers.find(x=>String(x.id)===String(id));
+  if(!k)return;
+
+  let status=!k.aktif;
+
+  try{
+    if(sbReady){
+      const {error}=await sb.from("kurir")
+        .update({aktif:status})
+        .eq("id",id);
+
+      if(error)throw error;
+    }
+
+    k.aktif=status;
+    localStorage.setItem("aykCouriers",JSON.stringify(couriers));
+
+    toast(status?"Kurir diaktifkan":"Kurir dinonaktifkan");
+
+    adminPage("courier",document.querySelectorAll(".tab")[3]);
+
+  }catch(e){
+    toast("Gagal mengubah status kurir: "+e.message);
+  }
+}
 async function addBranch(){let name=document.getElementById("bnm").value.trim(),address=document.getElementById("bad").value.trim(),lat=Number(document.getElementById("blat").value),lon=Number(document.getElementById("blon").value),pass=document.getElementById("bpass").value;if(!Number.isFinite(lat)||!Number.isFinite(lon))return toast("Latitude dan longitude cabang wajib diisi");if(!name||pass.length<6)return toast("Nama cabang wajib dan password minimal 6 karakter");let id="cabang-"+Date.now();try{if(sbReady){let {error}=await sb.from("cabang").insert({id,nama:name,alamat:address,aktif:true});if(error)throw error; let ar=await sb.from("admin_cabang").insert({cabang_id:id,password:pass});if(ar.error)throw ar.error;}branches.push({id,name,address});branchCoords[id]={lat,lon};localStorage.setItem("aykBranchCoords",JSON.stringify(branchCoords));saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]");a.push({branchId:id,password:pass});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Cabang berhasil dibuat");adminPage("branches",document.querySelectorAll(".tab")[3])}catch(e){toast("Gagal membuat cabang: "+e.message)}}
 async function removeBranch(id){if(!confirm("Hapus cabang ini?"))return;try{if(sbReady){let {error}=await sb.from("cabang").update({aktif:false}).eq("id",id);if(error)throw error;}branches=branches.filter(b=>b.id!==id);saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").filter(x=>x.branchId!==id);localStorage.setItem("aykBranchAdmins",JSON.stringify(a));adminPage("branches",document.querySelectorAll(".tab")[3]);toast("Cabang dihapus")}catch(e){toast("Gagal hapus cabang: "+e.message)}}
 async function changeBranchPassword(id){let np=prompt("Password baru untuk "+branchName(id)+" (minimal 6 karakter):");if(np===null)return;if(np.length<6)return toast("Password minimal 6 karakter");try{if(sbReady){let {error}=await sb.from("admin_cabang").update({password:np}).eq("cabang_id",id);if(error)throw error;}let a=branchAdmins.filter(x=>x.branchId!==id);a.push({branchId:id,password:np});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Password cabang berhasil diubah")}catch(e){toast("Gagal ubah password: "+e.message)}}
