@@ -667,25 +667,25 @@ function renderCartModal(){let ci=document.getElementById("ci");if(!ci)return;le
 function openCart(){let lines=cartLines();document.body.insertAdjacentHTML("beforeend",`<div class="modal-bg" id="cartModal"><div class="modal"><button class="close" onclick="document.getElementById('cartModal').remove()">×</button><h2>🛒 Keranjang</h2><div id="ci"></div><div id="checkoutTotal"></div><input id="bn" class="input" placeholder="Nama pelanggan"><input id="bp" class="input" placeholder="Nomor WhatsApp"><textarea id="ba" class="input" rows="3" placeholder="Alamat pengiriman"></textarea><div class="panel"><b>📍 Ongkir Otomatis</b><br><small>Ongkir dihitung otomatis berdasarkan alamat pengiriman yang Anda masukkan.</small><input id="bLat" type="hidden"><input id="bLng" type="hidden"><div id="locationInfo" style="font-size:12px;color:#555;margin-top:6px">Alamat akan digunakan untuk menghitung jarak dan ongkir.</div></div>${shipping.promoFree?`<label style="display:block;margin:8px 0"><input id="freePromo" type="checkbox" onchange="updateCheckoutTotal()"> 🎁 Gunakan Gratis Ongkir</label>`:""}<div id="shipInfo" class="panel"></div><label><b>Metode pembayaran</b></label><select id="payMethod" class="input" onchange="showPayInfo()"><option value="COD">COD — Bayar saat diterima</option><option value="TRANSFER">Transfer Bank</option><option value="QRIS">QRIS</option></select><div id="payInfo" class="panel" style="display:none"></div><label style="display:block;margin-top:8px"><b>Bukti pembayaran</b> <small>(untuk Transfer/QRIS)</small></label><input id="proof" class="input" type="file" accept="image/*"><button class="btn green full" onclick="finishOrder()">✅ Buat Pesanan</button></div></div>`);document.getElementById("cartModal").style.display="block";renderCartModal();showPayInfo();updateCheckoutTotal()} 
 async function geocodeAddress(address){
   try{
-    let parts=address
+    let clean=address
+      .replace(/\bRT\s*\d+\s*\/?\s*RW\s*\d+\b/gi,"")
+      .replace(/\bRT\s*\d+\b/gi,"")
+      .replace(/\bRW\s*\d+\b/gi,"")
+      .replace(/\s+/g," ")
+      .trim();
+
+    let queries=[
+      clean+", Indonesia",
+      "Desa "+clean+", Indonesia",
+      clean.replace(/Dusun\s+/i,"")+", Indonesia"
+    ];
+
+    // Tambahkan pencarian berdasarkan bagian akhir alamat
+    let parts=clean
       .split(",")
       .map(x=>x.trim())
       .filter(Boolean);
 
-    let queries=[];
-
-    // Alamat lengkap
-    queries.push(address+", Indonesia");
-
-    // Coba bagian-bagian alamat dari belakang
-    for(let i=0;i<parts.length;i++){
-      let q=parts.slice(i).join(", ");
-      if(q.length>=5){
-        queries.push(q+", Indonesia");
-      }
-    }
-
-    // Coba alamat tanpa nomor rumah/detail terlalu panjang
     if(parts.length>=3){
       queries.push(parts.slice(-3).join(", ")+", Indonesia");
     }
@@ -694,7 +694,10 @@ async function geocodeAddress(address){
       queries.push(parts.slice(-2).join(", ")+", Indonesia");
     }
 
-    // Hilangkan duplikat
+    // Untuk alamat Kemiren - Srumbung - Magelang
+    queries.push("Kemiren, Srumbung, Magelang, Jawa Tengah, Indonesia");
+    queries.push("Srumbung, Magelang, Jawa Tengah, Indonesia");
+
     queries=[...new Set(queries)];
 
     for(let text of queries){
@@ -726,7 +729,7 @@ async function geocodeAddress(address){
           }
         }
       }catch(err){
-        console.error("Percobaan alamat gagal:",text,err);
+        console.error("Pencarian gagal:",text,err);
       }
     }
 
