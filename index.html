@@ -466,7 +466,6 @@ async function loadMyCourierOrders(){
       courierStatus:o.status_kurir||"menunggu_kurir"
     }));
   }
-
   let mine=orders.filter(o=>
     String(o.courierId)===String(currentCourierId)
   );
@@ -487,13 +486,34 @@ async function loadMyCourierOrders(){
         <p>💰 Ongkir: <b>${rp(o.shipping||0)}</b></p>
         <p>💵 Bagian kurir: <b>${rp(Math.max(0,(o.shipping||0)-1000))}</b></p>
         <p>📌 Status: <b>${o.courierStatus||"diambil"}</b></p>
+        ${(o.courierStatus||"diambil")==="diambil" ? `
+<button class="btn green full" onclick="startCourierDelivery('${o.id}')">
+  🚚 Antar Pesanan
+</button>
+` : ""}
       </div>
     `).join("");
   }
 
-  html+=`</div>`;
+   html+=`</div>`;
 
   c.innerHTML=html;
+}
+
+async function startCourierDelivery(id){
+  try{
+    await syncCourierOrder(
+      id,
+      currentCourierId,
+      currentCourierName,
+      "diantar"
+    );
+
+    toast("Pesanan sedang diantar");
+    await loadMyCourierOrders();
+  }catch(e){
+    toast("Gagal mengubah status: "+e.message);
+  }
 }
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
 function courierLogin(){
