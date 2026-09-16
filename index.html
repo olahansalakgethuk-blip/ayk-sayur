@@ -638,7 +638,7 @@ function adminLogin(){
 }
 function adminApp(){document.getElementById("app").innerHTML=`<header><h1>${fs.logo && fs.logo.startsWith("data:image/")
   ? `<img src="${fs.logo}" style="width:150px;height:150px;object-fit:contain">`
-  : (fs.logo || "🥬 AYK SAYUR")}</h1><p>Panel Administrator</p></header><div class="tabs"><button class="tab active" onclick="adminPage('dash',this)">📊 Dashboard</button><button class="tab" onclick="adminPage('prod',this)">📦 Produk & Paket</button><button class="tab" onclick="adminPage('orders',this)">🧾 Pesanan</button>${adminMode==="pusat"?`<button class="tab" onclick="adminPage('branches',this)">🏪 Cabang</button>`:""}<button class="tab" onclick="adminPage('report',this)">📈 Laporan</button></div><div class="page" id="adminContent"></div><div class="top"><button class="btn light" onclick="landing()">← Keluar Admin</button></div>`;adminPage("dash",document.querySelector(".tab"))}
+  : (fs.logo || "🥬 AYK SAYUR")}</h1><p>Panel Administrator</p></header><div class="tabs"><button class="tab active" onclick="adminPage('dash',this)">📊 Dashboard</button><button class="tab" onclick="adminPage('prod',this)">📦 Produk & Paket</button><button class="tab" onclick="adminPage('orders',this)">🧾 Pesanan</button><button class="tab" onclick="adminPage('courier',this)">🚚 Kurir</button>${adminMode==="pusat"?`<button class="tab" onclick="adminPage('branches',this)">🏪 Cabang</button>`:""}<button class="tab" onclick="adminPage('report',this)">📈 Laporan</button></div><div class="page" id="adminContent"></div><div class="top"><button class="btn light" onclick="landing()">← Keluar Admin</button></div>`;adminPage("dash",document.querySelector(".tab"))}
 function adminPage(which,btn){
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   btn.classList.add("active");
@@ -743,11 +743,75 @@ Hapus
   }else if(which==="branches"){
     const non=branches.filter(b=>b.id!=="pusat");
     c.innerHTML=`<h2>🏪 Manajemen Cabang</h2><div class="panel"><b>➕ Tambah Cabang</b><input id="bnm" class="input" placeholder="Nama cabang"><input id="bad" class="input" placeholder="Alamat cabang"><input id="blat" class="input" type="number" step="any" placeholder="Latitude cabang"><input id="blon" class="input" type="number" step="any" placeholder="Longitude cabang"><small>Koordinat dipakai sebagai titik awal ongkir otomatis.</small><input id="bpass" class="input" type="password" placeholder="Password admin cabang (min. 6)"><button class="btn green full" onclick="addBranch()">Tambah Cabang</button></div><div class="panel"><b>Cabang Terdaftar</b>${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br><button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button> <button class="btn light" onclick="changeBranchPassword('${b.id}')">🔐 Password</button> <button class="btn red" onclick="removeBranch('${b.id}')">Hapus</button></div>`).join("")||"<p>Belum ada cabang.</p>"}</div><div id="branchManage"></div>`;
+    }else if(which==="courier"){
+    c.innerHTML=`<h2>🚚 Manajemen Kurir</h2>
+    <div class="panel">
+      <b>➕ Tambah Kurir</b>
+      <input id="knm" class="input" placeholder="Nama kurir">
+      <input id="kwa" class="input" placeholder="Nomor WhatsApp">
+      <button class="btn green full" onclick="addCourier()">Tambah Kurir</button>
+    </div>
+    <div class="panel">
+      <b>Daftar Kurir</b>
+      ${couriers.map(k=>`
+        <div class="panel">
+          <b>🚚 ${k.nama}</b><br>
+          <small>WhatsApp: ${k.whatsapp||"-"}</small><br>
+          <small>Status: ${k.aktif?"Aktif":"Nonaktif"}</small><br>
+          <button class="btn light" onclick="toggleCourier(${k.id})">
+            ${k.aktif?"🔴 Nonaktifkan":"🟢 Aktifkan"}
+          </button>
+        </div>
+      `).join("")||"<p>Belum ada kurir.</p>"}
+    </div>`;
   }else if(which==="report"){
     renderAdminReport(c);
   }else{
     c.innerHTML=`<h2>🧾 Pesanan</h2><button class="btn green full" onclick="refreshAdminOrders()">🔄 Refresh Pesanan Online</button><div id="orderList">${renderAdminOrders()}</div>`;
     if(sbReady)refreshAdminOrders();
+  }
+}
+async function addCourier(){
+  let nama=document.getElementById("knm").value.trim();
+  let whatsapp=document.getElementById("kwa").value.trim();
+
+  if(!nama){
+    toast("Nama kurir wajib diisi");
+    return;
+  }
+
+  try{
+    if(sbReady){
+      const {data,error}=await sb.from("kurir")
+        .insert({
+          nama:nama,
+          whatsapp:whatsapp,
+          aktif:true
+        })
+        .select()
+        .single();
+
+      if(error)throw error;
+
+      couriers.push(data);
+    }else{
+      let k={
+        id:Date.now(),
+        nama:nama,
+        whatsapp:whatsapp,
+        aktif:true
+      };
+      couriers.push(k);
+    }
+
+    localStorage.setItem("aykCouriers",JSON.stringify(couriers));
+
+    toast("Kurir berhasil ditambahkan");
+
+    adminPage("courier",document.querySelectorAll(".tab")[3]);
+
+  }catch(e){
+    toast("Gagal tambah kurir: "+e.message);
   }
 }
 async function addBranch(){let name=document.getElementById("bnm").value.trim(),address=document.getElementById("bad").value.trim(),lat=Number(document.getElementById("blat").value),lon=Number(document.getElementById("blon").value),pass=document.getElementById("bpass").value;if(!Number.isFinite(lat)||!Number.isFinite(lon))return toast("Latitude dan longitude cabang wajib diisi");if(!name||pass.length<6)return toast("Nama cabang wajib dan password minimal 6 karakter");let id="cabang-"+Date.now();try{if(sbReady){let {error}=await sb.from("cabang").insert({id,nama:name,alamat:address,aktif:true});if(error)throw error; let ar=await sb.from("admin_cabang").insert({cabang_id:id,password:pass});if(ar.error)throw ar.error;}branches.push({id,name,address});branchCoords[id]={lat,lon};localStorage.setItem("aykBranchCoords",JSON.stringify(branchCoords));saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]");a.push({branchId:id,password:pass});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Cabang berhasil dibuat");adminPage("branches",document.querySelectorAll(".tab")[3])}catch(e){toast("Gagal membuat cabang: "+e.message)}}
