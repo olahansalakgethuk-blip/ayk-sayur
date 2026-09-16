@@ -773,8 +773,14 @@ Hapus
           <b>🚚 ${k.nama}</b><br>
           <small>WhatsApp: ${k.whatsapp||"-"}</small><br>
           <small>Status: ${k.aktif?"Aktif":"Nonaktif"}</small><br>
+
           <button class="btn light" onclick="toggleCourier(${k.id})">
             ${k.aktif?"🔴 Nonaktifkan":"🟢 Aktifkan"}
+          </button>
+
+          <button class="btn light" style="margin-top:6px"
+            onclick="changeCourierPassword(${k.id})">
+            🔑 Ganti Password
           </button>
         </div>
       `).join("")||"<p>Belum ada kurir.</p>"}
@@ -861,6 +867,41 @@ let k=couriers.find(x=>String(x.id)===String(id));
 
   }catch(e){
     toast("Gagal mengubah status kurir: "+e.message);
+  }
+}
+async function changeCourierPassword(id){
+  let k=couriers.find(x=>String(x.id)===String(id));
+  if(!k)return;
+
+  let newPassword=prompt("Masukkan password baru untuk "+k.nama);
+
+  if(newPassword===null)return;
+
+  newPassword=newPassword.trim();
+
+  if(newPassword.length<6){
+    toast("Password minimal 6 karakter");
+    return;
+  }
+
+  try{
+    if(sbReady){
+      const {error}=await sb.from("kurir")
+        .update({password:newPassword})
+        .eq("id",id);
+
+      if(error)throw error;
+    }
+
+    k.password=newPassword;
+    localStorage.setItem("aykCouriers",JSON.stringify(couriers));
+
+    toast("Password kurir berhasil diganti");
+
+    adminPage("courier",document.querySelectorAll(".tab")[3]);
+
+  }catch(e){
+    toast("Gagal mengganti password: "+e.message);
   }
 }
 async function addBranch(){let name=document.getElementById("bnm").value.trim(),address=document.getElementById("bad").value.trim(),lat=Number(document.getElementById("blat").value),lon=Number(document.getElementById("blon").value),pass=document.getElementById("bpass").value;if(!Number.isFinite(lat)||!Number.isFinite(lon))return toast("Latitude dan longitude cabang wajib diisi");if(!name||pass.length<6)return toast("Nama cabang wajib dan password minimal 6 karakter");let id="cabang-"+Date.now();try{if(sbReady){let {error}=await sb.from("cabang").insert({id,nama:name,alamat:address,aktif:true});if(error)throw error; let ar=await sb.from("admin_cabang").insert({cabang_id:id,password:pass});if(ar.error)throw ar.error;}branches.push({id,name,address});branchCoords[id]={lat,lon};localStorage.setItem("aykBranchCoords",JSON.stringify(branchCoords));saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]");a.push({branchId:id,password:pass});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Cabang berhasil dibuat");adminPage("branches",document.querySelectorAll(".tab")[3])}catch(e){toast("Gagal membuat cabang: "+e.message)}}
