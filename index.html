@@ -42,6 +42,9 @@ let products=JSON.parse(localStorage.getItem("aykProducts")||"null")||initialPro
 products=products.map(p=>({...p,package5k:p.package5k!==false,packageUnit:p.packageUnit||((p.unit||"").toLowerCase()==="ikat"?"ikat":((p.unit||"").toLowerCase()==="kg"?"250 gram":"1 paket"))}));
 let orders=JSON.parse(localStorage.getItem("aykOrders")||"[]"),cart={},role=null;
 let branches=JSON.parse(localStorage.getItem("aykBranches")||"null")||[{id:"pusat",name:"AYK SAYUR Pusat",address:"Dusun Kemiren RT 04/RW 02, Desa Kemiren, Kecamatan Srumbung, Kabupaten Magelang"}];
+let couriers=JSON.parse(localStorage.getItem("aykCouriers")||"null")||[];
+let currentCourierId=null;
+let currentCourierName="";
 let branchCoords=JSON.parse(localStorage.getItem("aykBranchCoords")||"null")||{"pusat":{lat:-7.597361,lon:110.364056}};
 if(!branchCoords.pusat)branchCoords.pusat={lat:-7.597361,lon:110.364056};
 let branchOverrides={}; let branchAdmins=[]; let adminMode="pusat"; let currentBranchId="pusat";
@@ -135,6 +138,11 @@ async function loadOnlineData(){
     products=(data||[]).filter(x=>x.aktif!==false).map(mapProduct);
     products=products.map(p=>({...p,basePrice:p.basePrice??p.price,baseStock:p.baseStock??p.stock}));
     await loadBranches();
+    const {data:kurirData,error:ke}=await sb.from("kurir").select("*").order("id");
+if(!ke){
+  couriers=kurirData||[];
+  localStorage.setItem("aykCouriers",JSON.stringify(couriers));
+}
     if(role==="buyer"||adminMode==="cabang") await applyBranchView();
     localStorage.setItem("aykProducts",JSON.stringify(products));
     const {data:ord,error:oe}=await sb.from("pesanan").select("*").order("created_at",{ascending:false}).limit(100);
@@ -170,7 +178,34 @@ async function uploadProductPhoto(id){if(adminMode!=="pusat")return toast("Uploa
   }catch(e){console.error(e);toast("Gagal upload foto: "+e.message+". Pastikan bucket 'produk' sudah dibuat Public.")}
 }
 async function insertProduct(p){if(!sbReady)return;const {data,error}=await sb.from("produk").insert({nama:p.name,kategori:p.category||"sayuran",harga:p.price,modal:p.cost,stock:p.stock,satuan:p.unit,aktif:true,paket5k_aktif:p.package5k,paket5k_satuan:p.packageUnit}).select().single();if(error)throw error; p.id=data.id}
-async function syncOrder(o){if(!sbReady)return;const {error}=await sb.from("pesanan").insert({id:o.id,nama_pelanggan:o.name,whatsapp:o.phone,alamat:o.address,latitude:o.latitude,longitude:o.longitude,subtotal:o.subtotal,ongkir:o.shipping,zona:o.shippingZone,total:o.total,profit:o.profit,metode_pembayaran:o.payment,status:o.status,bukti_pembayaran:o.proof||"",items:o.items,cabang_id:o.branchId||"pusat",cabang_nama:o.branchName||branchName(o.branchId||"pusat")});if(error)throw error}
+async function syncOrder(o){
+  if(!sbReady)return;
+
+  const {error}=await sb.from("pesanan").insert({
+    id:o.id,
+    nama_pelanggan:o.name,
+    whatsapp:o.phone,
+    alamat:o.address,
+    latitude:o.latitude,
+    longitude:o.longitude,
+    subtotal:o.subtotal,
+    ongkir:o.shipping,
+    zona:o.shippingZone,
+    total:o.total,
+    profit:o.profit,
+    metode_pembayaran:o.payment,
+    status:o.status,
+    status_kurir:"menunggu_kurir",
+    kurir_id:null,
+    kurir_nama:"",
+    bukti_pembayaran:o.proof||"",
+    items:o.items,
+    cabang_id:o.branchId||"pusat",
+    cabang_nama:o.branchName||branchName(o.branchId||"pusat")
+  });
+
+  if(error)throw error;
+}
 async function syncOrderStatus(id,status){if(!sbReady)return;const {error}=await sb.from("pesanan").update({status}).eq("id",id);if(error)throw error}
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1300)}
 let aykDeferredInstallPrompt=null;
@@ -270,21 +305,82 @@ function landing(){
 </div>
 </div>`;
 }
-function buyerLogin(){role="buyer";buyerApp()}
+function courierApp(){
+  document.getElementById("app").innerHTML=`
+    <header>
+      <h1>🚚 AYK SAYUR</h1>
+      <p>Panel Kurir - ${currentCourierName}</p>
+    </header>
+
+    <div class="page">
+      <h2>📦 Pesanan Kurir</h2>
+      <div id="courierContent"></div>
+
+      <button class="btn light full" onclick="landing()">
+        ← Keluar
+      </button>
+    </div>
+  `;
+
+  loadCourierOrders();
+}
 function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
-function adminLogin(){document.getElementById("app").innerHTML=`<header style="display:flex;align-items:center;gap:15px">
-<div style="width:90px;text-align:center">
-${fs.logo && fs.logo.startsWith("data:image/")
-  ? `<img src="${fs.logo}" style="width:80px;height:80px;object-fit:contain">`
-  : `<span style="font-size:42px">🥬</span>`}
-</div>
-<div style="text-align:left">
-<h1 style="margin:0">AYK SAYUR</h1>
-<p style="margin:4px 0 0">Login Administrator</p>
-</div>
-</header><div class="page login"><h2>🔐 Masuk Admin</h2><label>Jenis Admin</label><select id="adminType" class="input" onchange="toggleBranchLogin()"><option value="pusat">Admin Pusat</option><option value="cabang">Admin Cabang</option></select><div id="branchLoginBox" style="display:none"><label>Pilih Cabang</label><select id="loginBranch" class="input">${branches.filter(b=>b.id!=="pusat").map(b=>`<option value="${b.id}">${b.name}</option>`).join("")||`<option value="">Belum ada cabang</option>`}</select></div><label>Password admin</label><div style="display:flex;gap:6px"><input id="adminPass" class="input" style="flex:1" type="password" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')checkAdmin()"><button class="btn light" type="button" onclick="togglePwd('adminPass',this)">👁️</button></div><button class="btn green full" onclick="checkAdmin()">Masuk</button><button class="btn light full" style="margin-top:8px" onclick="landing()">← Kembali</button><p style="font-size:12px;color:#777">Password Admin Pusat awal: <b>1234</b>.</p></div>`;toggleBranchLogin()}
+function courierLogin(){
+  document.getElementById("app").innerHTML=`
+    <header style="display:flex;align-items:center;gap:15px">
+      <div style="width:90px;text-align:center">
+        <span style="font-size:42px">🚚</span>
+      </div>
+      <div style="text-align:left">
+        <h1 style="margin:0">AYK SAYUR</h1>
+        <p style="margin:4px 0 0">Login Kurir</p>
+      </div>
+    </header>
+
+    <div class="page login">
+      <h2>🚚 Masuk Kurir</h2>
+
+      <label>Pilih Kurir</label>
+      <select id="courierSelect" class="input">
+        ${couriers.filter(k=>k.aktif).map(k=>`
+          <option value="${k.id}">${k.nama}</option>
+        `).join("") || `<option value="">Belum ada kurir</option>`}
+      </select>
+
+      <button class="btn green full" onclick="checkCourier()">
+        Masuk
+      </button>
+
+      <button class="btn light full" style="margin-top:8px" onclick="landing()">
+        ← Kembali
+      </button>
+    </div>
+  `;
+}
 function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
 function checkAdmin(){let type=document.getElementById("adminType").value; if(type==="pusat"){if(document.getElementById("adminPass").value===getAdminPassword()){role="admin";adminMode="pusat";currentBranchId="pusat";adminApp()}else toast("Password salah")}else{let id=document.getElementById("loginBranch").value,pass=document.getElementById("adminPass").value;let u=branchAdmins.find(x=>String(x.branchId)===String(id))||JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));if(u&&u.password===pass){role="admin";adminMode="cabang";currentBranchId=id;adminApp()}else toast("Password cabang salah")}}
+async function checkCourier(){
+  let id=document.getElementById("courierSelect").value;
+
+  if(!id){
+    toast("Kurir belum tersedia");
+    return;
+  }
+
+  let courier=couriers.find(x=>String(x.id)===String(id));
+
+  if(!courier){
+    toast("Data kurir tidak ditemukan");
+    return;
+  }
+
+  role="courier";
+  currentCourierId=courier.id;
+  currentCourierName=courier.nama;
+
+  await loadOnlineData();
+  courierApp();
+}
 function changeAdminPassword(){let old=document.getElementById("oldAdminPass").value,newp=document.getElementById("newAdminPass").value,conf=document.getElementById("confirmAdminPass").value;if(old!==getAdminPassword())return toast("Password lama salah");if(newp.length<6)return toast("Password baru minimal 6 karakter");if(newp!==conf)return toast("Konfirmasi password tidak sama");localStorage.setItem("aykAdminPassword",newp);toast("Password admin berhasil diganti");document.getElementById("oldAdminPass").value="";document.getElementById("newAdminPass").value="";document.getElementById("confirmAdminPass").value=""}
 function buyerApp(){document.getElementById("app").innerHTML=`<header style="display:flex;align-items:center;gap:15px">
 <div style="width:90px;text-align:center">
