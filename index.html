@@ -752,7 +752,58 @@ async function cancelBuyerOrder(id){let o=orders.find(x=>x.id===id);if(!o)return
 function showBuyerOrders(){
   document.body.insertAdjacentHTML("beforeend",`<div class="modal-bg" id="buyerOrders"><div class="modal"><button class="close" onclick="document.getElementById('buyerOrders').remove()">×</button><h2>📦 Pesanan Saya</h2><p><small>Masukkan nomor WhatsApp yang dipakai saat checkout agar pesanan hanya menampilkan milik Anda.</small></p><input id="myPhone" class="input" placeholder="Nomor WhatsApp" oninput="renderBuyerOrders()"><div id="myOrderList"><p>Masukkan nomor WhatsApp.</p></div></div></div>`);document.getElementById("buyerOrders").style.display="block"}
 function renderBuyerOrders(){let phone=(document.getElementById("myPhone")?.value||"").replace(/\D/g,"");let list=document.getElementById("myOrderList");if(!list)return;if(phone.length<6){list.innerHTML="<p>Masukkan nomor WhatsApp.</p>";return}let mine=orders.filter(o=>(o.phone||"").replace(/\D/g,"")===phone).slice(0,20);list.innerHTML=mine.map(o=>{let map=o.latitude&&o.longitude?`<a href="https://www.google.com/maps?q=${o.latitude},${o.longitude}" target="_blank"><button class="btn light">📍 Lokasi</button></a>`:"";return `<div class="panel"><b>${o.id}</b><br><small>${o.date}</small><br>🏪 <b>${o.branchName||branchName(o.branchId)}</b><p>${(o.items||[]).map(i=>i.name+" ×"+i.qty+(i.package?" 🎁5K":"")).join(", ")}</p><small>Subtotal: ${rp(o.subtotal||o.total)} · Ongkir: ${rp(o.shipping||0)}</small><br><b>${rp(o.total)}</b><br>💳 ${o.payment||"COD"}<p><b>Status: ${o.status||"Menunggu diproses"}</b></p><div style="display:flex;gap:6px;flex-wrap:wrap">${map}${o.status==="Menunggu diproses"?`<button class="btn red" onclick="cancelBuyerOrder('${o.id}')">✖ Batalkan</button>`:""}</div>${o.status==="Dibatalkan"?`<small>Pesanan dibatalkan dan stok dikembalikan.</small>`:""}</div>`}).join("")||"<p>Tidak ada pesanan untuk nomor tersebut.</p>"}
-function togglePassword(id,button){
+function adminLogin(){
+  document.getElementById("app").innerHTML=`
+    <header>
+      <h1>🥬 AYK SAYUR</h1>
+      <p>Login Administrator</p>
+    </header>
+
+    <div class="page login">
+      <h2>🔐 Login Administrator</h2>
+
+      <label>Jenis Admin</label>
+      <select id="adminType" class="input" onchange="showAdminLoginType()">
+        <option value="pusat">Admin Pusat</option>
+        <option value="cabang">Admin Cabang</option>
+      </select>
+
+      <div id="adminLoginExtra"></div>
+
+      <label style="display:block;margin-top:12px">
+        Password
+      </label>
+
+      <div style="position:relative">
+        <input
+          id="adminPass"
+          class="input"
+          type="password"
+          placeholder="Masukkan password admin"
+          style="padding-right:50px"
+          onkeydown="if(event.key==='Enter')checkAdmin()"
+        >
+
+        <button
+          type="button"
+          onclick="togglePassword('adminPass',this)"
+          style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:22px;cursor:pointer"
+        >👁️</button>
+      </div>
+
+      <button class="btn green full" onclick="checkAdmin()">
+        🔓 Masuk Admin
+      </button>
+
+      <button class="btn light full" style="margin-top:8px" onclick="landing()">
+        ← Kembali
+      </button>
+    </div>
+  `;
+
+  showAdminLoginType();
+}
+  function togglePassword(id,button){
   let input=document.getElementById(id);
 
   if(!input)return;
