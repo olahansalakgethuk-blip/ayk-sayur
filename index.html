@@ -589,10 +589,20 @@ function courierLogin(){
       </select>
 
       <label style="display:block;margin-top:12px">Password</label>
-      <input id="courierPassword"
-             class="input"
-             type="password"
-             placeholder="Masukkan password">
+
+<div style="position:relative">
+  <input id="courierPassword"
+         class="input"
+         type="password"
+         placeholder="Masukkan password"
+         style="padding-right:45px">
+
+  <button type="button"
+          onclick="toggleCourierPassword()"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:20px;cursor:pointer">
+    👁️
+  </button>
+</div>
 
       <button class="btn green full" onclick="checkCourier()">
         Masuk
@@ -603,7 +613,8 @@ function courierLogin(){
       </button>
     </div>
   `;
-}function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
+}
+function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
 function checkAdmin(){let type=document.getElementById("adminType").value; if(type==="pusat"){if(document.getElementById("adminPass").value===getAdminPassword()){role="admin";adminMode="pusat";currentBranchId="pusat";adminApp()}else toast("Password salah")}else{let id=document.getElementById("loginBranch").value,pass=document.getElementById("adminPass").value;let u=branchAdmins.find(x=>String(x.branchId)===String(id))||JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));if(u&&u.password===pass){role="admin";adminMode="cabang";currentBranchId=id;adminApp()}else toast("Password cabang salah")}}
 async function checkCourier(){
   let id=document.getElementById("courierSelect").value;
@@ -637,6 +648,12 @@ async function checkCourier(){
 
   await loadOnlineData();
   courierApp();
+}
+function toggleCourierPassword(){
+  const input = document.getElementById("courierPassword");
+  if(!input) return;
+
+  input.type = input.type === "password" ? "text" : "password";
 }
 function changeAdminPassword(){let old=document.getElementById("oldAdminPass").value,newp=document.getElementById("newAdminPass").value,conf=document.getElementById("confirmAdminPass").value;if(old!==getAdminPassword())return toast("Password lama salah");if(newp.length<6)return toast("Password baru minimal 6 karakter");if(newp!==conf)return toast("Konfirmasi password tidak sama");localStorage.setItem("aykAdminPassword",newp);toast("Password admin berhasil diganti");document.getElementById("oldAdminPass").value="";document.getElementById("newAdminPass").value="";document.getElementById("confirmAdminPass").value=""}
 function buyerLogin(){
