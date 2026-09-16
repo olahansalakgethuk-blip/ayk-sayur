@@ -249,86 +249,152 @@ function installLanding(){
 }
 function landing(){
   role=null;
+
   if(new URLSearchParams(location.search).get("install")==="1"){
     installLanding();
     return;
   }
 
-  let fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");
-
-  const logoView =
-    fs.logo && fs.logo.startsWith("data:image/")
-      ? `<img src="${fs.logo}" style="width:150px;height:150px;object-fit:contain">`
-      : "";
-
-  const profileView =
-    fs.profile && fs.profile.startsWith("data:image/")
-      ? `<img src="${fs.profile}" style="width:55px;height:55px;object-fit:contain;border-radius:12px">`
-      : (fs.profile || "👤");
-
-  const bgStyle =
-    fs.bg && fs.bg.startsWith("data:image/")
-      ? `background-image:url("${fs.bg}");background-size:cover;background-position:center;`
-      : `background:${fs.bg || ""};`;
+ window.fs=JSON.parse(localStorage.getItem("aykFrontSettings")||"{}");
 
   document.getElementById("app").innerHTML=`
 
-<header style="${bgStyle}">
-  <div style="text-align:center">
-    ${logoView}
-    <h1 style="margin:8px 0;color:#fff;font-size:25px">AYK SAYUR</h1>
-    <p style="margin:0;color:#fff">
-      ${fs.tagline || "Sayur Segar, Belanja Praktis"}
-    </p>
-  </div>
+<header style="
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 15px;
+  background:${fs.bg || "#2e7d32"};
+">
 
-  <div style="
-    background:#fff;
-    border-radius:16px;
-    padding:12px;
-    margin-top:15px;
-    text-align:center">
+  <div style="display:flex;align-items:center;gap:10px">
 
-    <img src="AYK_SAYUR_QR_KONSUMEN.png.png"
-         alt="QR AYK SAYUR"
-         style="width:180px;height:180px;object-fit:contain">
-
-    <div style="color:#287a3d;font-weight:bold;margin-top:8px">
-      📱 Scan untuk Belanja
+    <div style="width:55px;text-align:center">
+      ${
+        fs.logo && fs.logo.startsWith("data:image/")
+        ? `<img src="${fs.logo}" style="width:50px;height:50px;object-fit:contain">`
+        : `<span style="font-size:38px">🥬</span>`
+      }
     </div>
 
-    <small style="color:#555">
-      ayksayur.vercel.app
-    </small>
+    <div>
+      <h1 style="margin:0;color:#fff;font-size:21px">
+        AYK SAYUR
+      </h1>
+
+      <p style="margin:3px 0 0;color:#fff;font-size:13px">
+        ${fs.tagline || "Sayur Segar, Belanja Praktis"}
+      </p>
+    </div>
+
   </div>
+
+  <!-- IKON RUMAH KECIL -->
+  <button onclick="showHomeMenu()"
+          style="
+            width:42px;
+            height:42px;
+            border:0;
+            border-radius:50%;
+            background:#fff;
+            font-size:22px;
+            cursor:pointer">
+    🏠
+  </button>
+
 </header>
 
-<div class="page role">
+<div class="top">
 
-  <h2 style="text-align:center">AYK SAYUR</h2>
-
-  <!-- PEMBELI LANGSUNG DI HALAMAN DEPAN -->
-  <div class="role-card" onclick="buyerLogin()">
-    <div class="role-icon">${profileView}</div>
-    <b>PEMBELI</b>
-    <small>Belanja sayuran dan lihat pesanan</small>
+  <div>
+    ${
+      typeof fs.shop==="string" &&
+      fs.shop.trim().startsWith("data:image/")
+      ? `<img src="${fs.shop.trim()}"
+              style="width:35px;height:35px;object-fit:contain;vertical-align:middle">`
+      : `<b>🛒 Belanja</b>`
+    }
   </div>
 
-  <!-- IKON RUMAH -->
-  <div class="role-card"
-       onclick="showHomeMenu()"
-       style="cursor:pointer">
+  <button class="btn light"
+          onclick="showBuyerOrders()">
+    📦 Pesanan
+  </button>
 
-    <div class="role-icon">🏠</div>
-    <b>MENU UTAMA</b>
-    <small>Admin, Kurir & Download Aplikasi</small>
+</div>
 
+<div class="page">
+
+  <input id="search"
+         class="input"
+         placeholder="🔎 Cari sayuran..."
+         oninput="renderShop()">
+
+  <select id="branchFilter"
+          class="input"
+          onchange="changeBuyerBranch(this.value)">
+    ${branches.map(b=>`
+      <option value="${b.id}"
+        ${String(b.id)===String(currentBranchId)?"selected":""}>
+        🏪 ${b.name}
+      </option>
+    `).join("")}
+  </select>
+
+  <select id="catFilter"
+          class="input"
+          onchange="renderShop()">
+
+    <option value="">
+      📂 Semua kategori
+    </option>
+
+    ${[...new Set(
+      products
+        .map(p=>p.category)
+        .filter(Boolean)
+    )]
+    .sort()
+    .map(c=>`
+      <option value="${c}">
+        ${c}
+      </option>
+    `).join("")}
+
+  </select>
+
+  <div class="panel">
+    <b>🎁 Paket Serba 5K</b><br>
+    <small>
+      Pilih produk yang tersedia dalam paket Rp5.000.
+    </small>
+  </div>
+
+  <div id="shopProducts"
+       class="product-grid">
   </div>
 
 </div>
-`;
-}
 
+<div class="bottom">
+
+  <div>
+    🛒 <b id="cartCount">0</b> item ·
+    <b id="cartTotal">Rp0</b>
+  </div>
+
+  <button class="btn"
+          style="background:#d32f2f;color:#fff"
+          onclick="openCart()">
+    Beli Sekarang
+  </button>
+
+</div>
+`;
+
+  renderShop();
+}
 
 function showHomeMenu(){
 
@@ -345,6 +411,35 @@ function showHomeMenu(){
   <h2 style="text-align:center">
     🏠 Menu Utama AYK SAYUR
   </h2>
+
+  <!-- QR BELANJA -->
+  <div style="
+    background:#fff;
+    border:1px solid #dce6da;
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:18px;
+    text-align:center">
+
+    <div style="
+      font-weight:bold;
+      color:#287a3d;
+      margin-bottom:8px">
+      📱 QR Belanja AYK SAYUR
+    </div>
+
+    <img src="AYK_SAYUR_QR_KONSUMEN.png.png"
+         alt="QR Belanja AYK SAYUR"
+         style="width:180px;height:180px;object-fit:contain">
+
+    <small style="
+      color:#555;
+      display:block;
+      margin-top:8px">
+      Scan untuk membuka AYK SAYUR dan berbelanja
+    </small>
+
+  </div>
 
   <div class="role-card" onclick="adminLogin()">
     <div class="role-icon">🔐</div>
@@ -364,6 +459,7 @@ function showHomeMenu(){
     <small>Ambil dan antar pesanan</small>
   </div>
 
+  <!-- QR DOWNLOAD APLIKASI -->
   <div style="
     background:#fff;
     border:1px solid #dce6da;
