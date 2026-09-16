@@ -1036,14 +1036,47 @@ function printOrder(id){
 async function refreshAdminOrders(){
   if(!sbReady)return toast("Supabase belum tersambung");
   const btns=document.querySelectorAll("#adminContent button");
+
   try{
-    const {data,error}=await sb.from("pesanan").select("*").order("created_at",{ascending:false}).limit(100);
+    const {data,error}=await sb.from("pesanan")
+      .select("*")
+      .order("created_at",{ascending:false})
+      .limit(100);
+
     if(error)throw error;
-    orders=(data||[]).map(o=>({id:o.id,date:o.created_at?new Date(o.created_at).toLocaleString("id-ID"):"",name:o.nama_pelanggan,phone:o.whatsapp,address:o.alamat,subtotal:Number(o.subtotal||0),shipping:Number(o.ongkir||0),shippingZone:o.zona,total:Number(o.total||0),profit:Number(o.profit||0),items:o.items||[],payment:o.metode_pembayaran,status:o.status,proof:o.bukti_pembayaran||"",branchId:o.cabang_id||"pusat",branchName:o.cabang_nama||branchName(o.cabang_id||"pusat"),latitude:Number(o.latitude)||null,longitude:Number(o.longitude)||null}));
+
+    orders=(data||[]).map(o=>({
+      id:o.id,
+      date:o.created_at?new Date(o.created_at).toLocaleString("id-ID"):"",
+      name:o.nama_pelanggan,
+      phone:o.whatsapp,
+      address:o.alamat,
+      subtotal:Number(o.subtotal||0),
+      shipping:Number(o.ongkir||0),
+      shippingZone:o.zona,
+      total:Number(o.total||0),
+      profit:Number(o.profit||0),
+      items:o.items||[],
+      payment:o.metode_pembayaran,
+      status:o.status,
+      proof:o.bukti_pembayaran||"",
+      branchId:o.cabang_id||"pusat",
+      branchName:o.cabang_nama||branchName(o.cabang_id||"pusat"),
+      latitude:Number(o.latitude)||null,
+      longitude:Number(o.longitude)||null,
+
+      courierId:o.kurir_id||null,
+      courierName:o.kurir_nama||"",
+      courierStatus:o.status_kurir||"menunggu_kurir"
+    }));
+
     localStorage.setItem("aykOrders",JSON.stringify(orders));
+
     const list=document.getElementById("orderList");
     if(list)list.innerHTML=renderAdminOrders();
+
     toast("Pesanan online diperbarui");
+
   }catch(e){
     console.error(e);
     toast("Gagal refresh pesanan: "+e.message);
