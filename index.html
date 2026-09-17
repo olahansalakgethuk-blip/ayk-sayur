@@ -698,22 +698,38 @@ function renderKelilingStock(){
       </label>
 
       <input
-        id="kelilingPrice_${p.id}"
-        class="input"
-        type="number"
-        min="0"
-        value="${p.price||0}"
-        placeholder="Harga jual keliling">
+      id="kelilingPrice_${p.id}"
+class="input"
+type="number"
+min="0"
+value="${
+  (window.kelilingStockData||[]).find(
+    x=>String(x.produk_id)===String(p.id)
+  )?.harga_jual ?? p.price ?? 0
+}"
+placeholder="Harga jual keliling">
 
       <small style="
         display:block;
         margin-top:6px;
         color:#287a3d">
+
         📈 Keuntungan:
         <b id="kelilingProfit_${p.id}">
-          ${rp(0)}
+          ${rp(
+            Math.max(
+              0,
+              Number(
+                (window.kelilingStockData||[]).find(
+                  x=>String(x.produk_id)===String(p.id)
+                )?.harga_jual || p.price || 0
+              ) - Number(p.price||0)
+            )
+          )}
         </b>
+
         / ${p.unit||"unit"}
+
       </small>
 
     </div>
