@@ -742,18 +742,24 @@ async function saveKelilingStock(){
 
     products.forEach(p=>{
 
-      const input=document.getElementById(
+      const stockInput=document.getElementById(
         "kelilingStock_"+p.id
       );
 
-      if(!input)return;
+      const priceInput=document.getElementById(
+        "kelilingPrice_"+p.id
+      );
 
-      const stok=parseFloat(input.value)||0;
+      if(!stockInput || !priceInput)return;
+
+      const stok=parseFloat(stockInput.value)||0;
+      const hargaJual=parseFloat(priceInput.value)||0;
 
       stokData.push({
         penjual_id:currentKelilingSellerId,
         produk_id:p.id,
-        stok:stok
+        stok:stok,
+        harga_jual:hargaJual
       });
 
     });
@@ -780,18 +786,17 @@ async function saveKelilingStock(){
 
     }
 
-    toast("Stok berhasil disimpan");
+    toast("Stok & harga jual berhasil disimpan");
 
   }catch(e){
 
     toast(
-      "Gagal menyimpan stok: "
+      "Gagal menyimpan stok & harga: "
       +e.message
     );
 
   }
-}
-function kelilingTransactions(){
+}function kelilingTransactions(){
 
   document.getElementById("app").innerHTML=`
 
