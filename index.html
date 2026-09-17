@@ -550,18 +550,17 @@ function kelilingApp(){
   </small>
 
 </div>
-      <div class="role-card">
+      <div class="role-card" onclick="kelilingTransactions()">
 
-        <div class="role-icon">🧾</div>
+  <div class="role-icon">🧾</div>
 
-        <b>TRANSAKSI</b>
+  <b>TRANSAKSI</b>
 
-        <small>
-          Lihat transaksi penjualan keliling
-        </small>
+  <small>
+    Lihat transaksi penjualan keliling
+  </small>
 
-      </div>
-
+</div>
       <div class="role-card">
 
         <div class="role-icon">📊</div>
@@ -729,6 +728,279 @@ async function saveKelilingStock(){
     );
 
   }
+}
+function kelilingTransactions(){
+
+  document.getElementById("app").innerHTML=`
+
+    <header>
+      <h1>🧾 Transaksi Penjual Keliling</h1>
+      <p>${currentKelilingSellerName||"Penjual Keliling"}</p>
+    </header>
+
+    <div class="page">
+
+      <button class="btn light full"
+              onclick="kelilingApp()">
+        ← Kembali
+      </button>
+
+      <div class="panel">
+
+        <h3>🛒 Penjualan Hari Ini</h3>
+
+        <p>
+          Catat transaksi penjualan yang dilakukan
+          selama berjualan keliling.
+        </p>
+
+      </div>
+
+      <div class="panel">
+
+        <b>📦 Pilih Produk</b>
+
+        <select id="kelilingTransactionProduct"
+                class="input">
+
+          <option value="">
+            Pilih produk
+          </option>
+
+          ${products.map(p=>`
+            <option value="${p.id}">
+              ${p.name} - ${rp(p.price)}
+            </option>
+          `).join("")}
+
+        </select>
+
+        <label style="
+          display:block;
+          margin-top:10px">
+          Jumlah
+        </label>
+
+        <input id="kelilingTransactionQty"
+               class="input"
+               type="number"
+               min="1"
+               value="1"
+               placeholder="Jumlah">
+
+        <label style="
+          display:block;
+          margin-top:10px">
+          Metode Pembayaran
+        </label>
+
+        <select id="kelilingTransactionPayment"
+                class="input">
+
+          <option value="CASH">
+            💵 Tunai
+          </option>
+
+          <option value="QRIS">
+            📱 QRIS
+          </option>
+
+          <option value="TRANSFER">
+            🏦 Transfer
+          </option>
+
+        </select>
+
+        <button class="btn green full"
+                style="margin-top:12px"
+                onclick="saveKelilingTransaction()">
+          💾 Simpan Transaksi
+        </button>
+
+      </div>
+
+      <div id="kelilingTransactionList"></div>
+
+    </div>
+  `;
+
+  renderKelilingTransactions();
+}
+async function renderKelilingTransactions(){
+
+  const box=document.getElementById("kelilingTransactionList");
+
+  if(!box)return;
+
+  if(!currentKelilingSellerId){
+    box.innerHTML=`
+      <div class="panel">
+        <p>Penjual keliling belum login.</p>
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML=`
+    <div class="panel">
+      <p>⏳ Memuat transaksi...</p>
+    </div>
+  `;
+
+  try{
+
+    const {data,error}=await sb
+      .from("transaksi_penjual_keliling")
+      .select("*")
+      .eq("penjual_id",currentKelilingSellerId)
+      .order("created_at",{ascending:false});
+
+    if(error)throw error;
+
+    if(!data || !data.length){
+
+      box.innerHTML=`
+        <div class="panel">
+          <h3>🧾 Riwayat Transaksi</h3>
+          <p>Belum ada transaksi penjualan.</p>
+        </div>
+      `;
+
+      return;
+    }
+
+    box.innerHTML=`
+      <div class="panel">
+
+        <h3>🧾 Riwayat Transaksi</h3>
+
+        ${data.map(t=>{
+
+          const product=
+            products.find(
+              p=>String(p.id)===String(t.produk_id)
+            );
+
+          return `
+            <div style="
+              padding:10px 0;
+              border-bottom:1px solid #ddd">
+
+              <b>
+                ${product?.emoji||"🥬"}
+                ${product?.name||"Produk"}
+              </b>
+
+              <br>
+
+              <small>
+                ${t.jumlah} × ${rp(t.harga)}
+              </small>
+
+              <br>
+
+              <b>
+                Total: ${rp(t.total)}
+              </b>
+
+              <br>
+
+              <small>
+                Pembayaran: ${t.pembayaran||"-"}
+              </small>
+
+            </div>
+          `;
+
+        }).join("")}
+
+      </div>
+    `;
+
+  }catch(e){
+
+    box.innerHTML=`
+      <div class="panel">
+        <p>❌ Gagal memuat transaksi.</p>
+        <small>${e.message}</small>
+      </div>
+    `;
+
+  }
+
+}
+async function saveKelilingTransaction(){
+
+  if(!currentKelilingSellerId){
+    toast("Penjual keliling belum login");
+    return;
+  }
+
+  const productId =
+    document.getElementById("kelilingTransactionProduct").value;
+
+  const qty =
+    parseFloat(
+      document.getElementById("kelilingTransactionQty").value
+    ) || 0;
+
+  const payment =
+    document.getElementById("kelilingTransactionPayment").value;
+
+  if(!productId){
+    toast("Produk belum dipilih");
+    return;
+  }
+
+  if(qty<=0){
+    toast("Jumlah harus lebih dari 0");
+    return;
+  }
+
+  const product =
+    products.find(
+      p=>String(p.id)===String(productId)
+    );
+
+  if(!product){
+    toast("Produk tidak ditemukan");
+    return;
+  }
+
+  const harga =
+    Number(product.price)||0;
+
+  const total =
+    harga * qty;
+
+  try{
+
+    const {error}=await sb
+      .from("transaksi_penjual_keliling")
+      .insert({
+        penjual_id:currentKelilingSellerId,
+        produk_id:product.id,
+        jumlah:qty,
+        harga:harga,
+        total:total,
+        pembayaran:payment
+      });
+
+    if(error)throw error;
+
+    toast("Transaksi berhasil disimpan");
+
+    renderKelilingTransactions();
+
+  }catch(e){
+
+    toast(
+      "Gagal menyimpan transaksi: "
+      +e.message
+    );
+
+  }
+
 }
 function courierApp(){
   document.getElementById("app").innerHTML=`
