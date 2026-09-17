@@ -610,8 +610,41 @@ function kelilingStock(){
     </div>
   `;
 
-  renderKelilingStock();
+   loadKelilingStock();
 }
+async function loadKelilingStock(){
+
+  if(!currentKelilingSellerId){
+    toast("Penjual keliling belum login");
+    return;
+  }
+
+  try{
+
+    const {data,error}=await sb
+      .from("stok_penjual_keliling")
+      .select("*")
+      .eq("penjual_id",currentKelilingSellerId);
+
+    if(error)throw error;
+
+    window.kelilingStockData=data||[];
+
+    renderKelilingStock();
+
+  }catch(e){
+
+    toast(
+      "Gagal memuat stok: "
+      +e.message
+    );
+
+    renderKelilingStock();
+
+  }
+
+}
+function renderKelilingStock(){
 function renderKelilingStock(){
 
   const box=document.getElementById("kelilingStockList");
@@ -647,13 +680,16 @@ function renderKelilingStock(){
       </label>
 
       <input
-        id="kelilingStock_${p.id}"
-        class="input"
-        type="number"
-        min="0"
-        value="0"
-        placeholder="Jumlah stok">
-
+  id="kelilingStock_${p.id}"
+  class="input"
+  type="number"
+  min="0"
+  value="${
+    (window.kelilingStockData||[]).find(
+      x=>String(x.produk_id)===String(p.id)
+    )?.stok ?? 0
+  }"
+  placeholder="Jumlah stok">
     </div>
 
    `).join("");
