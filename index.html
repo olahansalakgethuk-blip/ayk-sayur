@@ -1376,6 +1376,72 @@ Hapus
         </div>
       `).join("")||"<p>Belum ada kurir.</p>"}
     </div>`;
+      }else if(which==="keliling"){
+    c.innerHTML=`<h2>🛺 Manajemen Penjual Keliling</h2>
+
+    <div class="panel">
+      <b>➕ Tambah Penjual Keliling</b>
+
+      <input id="knmKeliling"
+             class="input"
+             placeholder="Nama penjual">
+
+      <input id="kwaKeliling"
+             class="input"
+             placeholder="Nomor WhatsApp">
+
+      <input id="kuserKeliling"
+             class="input"
+             placeholder="Username login">
+
+      <input id="kpassKeliling"
+             class="input"
+             type="password"
+             placeholder="Password">
+
+      <input id="kwilayahKeliling"
+             class="input"
+             placeholder="Wilayah jual keliling">
+
+      <button class="btn green full"
+              onclick="addKelilingSeller()">
+        Tambah Penjual Keliling
+      </button>
+    </div>
+
+    <div class="panel">
+      <b>🛺 Daftar Penjual Keliling</b>
+
+      ${kelilingSellers.map(k=>`
+        <div class="panel">
+
+          <b>🛺 ${k.nama}</b><br>
+
+          <small>
+            WhatsApp: ${k.whatsapp||"-"}
+          </small><br>
+
+          <small>
+            Username: ${k.username||"-"}
+          </small><br>
+
+          <small>
+            Wilayah: ${k.wilayah||"-"}
+          </small><br>
+
+          <small>
+            Status: ${k.aktif?"Aktif":"Nonaktif"}
+          </small><br>
+
+          <button class="btn light"
+                  onclick="toggleKelilingSeller(${k.id})">
+            ${k.aktif?"🔴 Nonaktifkan":"🟢 Aktifkan"}
+          </button>
+
+        </div>
+      `).join("")||"<p>Belum ada penjual keliling.</p>"}
+
+    </div>`;
   }else if(which==="report"){
     renderAdminReport(c);
   }else{
@@ -1434,6 +1500,82 @@ async function addCourier(){
     toast("Gagal tambah kurir: "+e.message);
   }
 }
+async function addKelilingSeller(){
+
+  let nama=document.getElementById("knmKeliling").value.trim();
+  let whatsapp=document.getElementById("kwaKeliling").value.trim();
+  let username=document.getElementById("kuserKeliling").value.trim();
+  let password=document.getElementById("kpassKeliling").value;
+  let wilayah=document.getElementById("kwilayahKeliling").value.trim();
+
+  if(!nama){
+    toast("Nama penjual wajib diisi");
+    return;
+  }
+
+  if(!username){
+    toast("Username wajib diisi");
+    return;
+  }
+
+  if(password.length<6){
+    toast("Password minimal 6 karakter");
+    return;
+  }
+
+  try{
+
+    if(sbReady){
+
+      const {data,error}=await sb.from("penjual_keliling")
+        .insert({
+          nama:nama,
+          whatsapp:whatsapp,
+          username:username,
+          password:password,
+          wilayah:wilayah,
+          aktif:true
+        })
+        .select()
+        .single();
+
+      if(error)throw error;
+
+      kelilingSellers.push(data);
+
+    }else{
+
+      let k={
+        id:Date.now(),
+        nama:nama,
+        whatsapp:whatsapp,
+        username:username,
+        password:password,
+        wilayah:wilayah,
+        aktif:true
+      };
+
+      kelilingSellers.push(k);
+    }
+
+    localStorage.setItem(
+      "aykKelilingSellers",
+      JSON.stringify(kelilingSellers)
+    );
+
+    toast("Penjual keliling berhasil ditambahkan");
+
+    adminPage(
+      "keliling",
+      document.querySelectorAll(".tab")[4]
+    );
+
+  }catch(e){
+
+    toast("Gagal tambah penjual keliling: "+e.message);
+
+  }
+}
 async function toggleCourier(id){
 let k=couriers.find(x=>String(x.id)===String(id));
   if(!k)return;
@@ -1458,6 +1600,54 @@ let k=couriers.find(x=>String(x.id)===String(id));
 
   }catch(e){
     toast("Gagal mengubah status kurir: "+e.message);
+  }
+}
+async function toggleKelilingSeller(id){
+
+  let k=kelilingSellers.find(
+    x=>String(x.id)===String(id)
+  );
+
+  if(!k)return;
+
+  let status=!k.aktif;
+
+  try{
+
+    if(sbReady){
+
+      const {error}=await sb.from("penjual_keliling")
+        .update({aktif:status})
+        .eq("id",id);
+
+      if(error)throw error;
+    }
+
+    k.aktif=status;
+
+    localStorage.setItem(
+      "aykKelilingSellers",
+      JSON.stringify(kelilingSellers)
+    );
+
+    toast(
+      status
+      ? "Penjual keliling diaktifkan"
+      : "Penjual keliling dinonaktifkan"
+    );
+
+    adminPage(
+      "keliling",
+      document.querySelectorAll(".tab")[4]
+    );
+
+  }catch(e){
+
+    toast(
+      "Gagal mengubah status penjual keliling: "
+      +e.message
+    );
+
   }
 }
 async function changeCourierPassword(id){
