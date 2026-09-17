@@ -539,18 +539,17 @@ function kelilingApp(){
 
       </div>
 
-      <div class="role-card">
+      <div class="role-card" onclick="kelilingStock()">
 
-        <div class="role-icon">📦</div>
+  <div class="role-icon">📦</div>
 
-        <b>STOK PRODUK</b>
+  <b>STOK PRODUK</b>
 
-        <small>
-          Lihat dan kelola stok sayuran
-        </small>
+  <small>
+    Lihat dan kelola stok sayuran
+  </small>
 
-      </div>
-
+</div>
       <div class="role-card">
 
         <div class="role-icon">🧾</div>
@@ -583,6 +582,83 @@ function kelilingApp(){
 
     </div>
   `;
+}
+function kelilingStock(){
+
+  document.getElementById("app").innerHTML=`
+
+    <header>
+      <h1>📦 Stok Penjual Keliling</h1>
+      <p>${currentKelilingSellerName||"Penjual Keliling"}</p>
+    </header>
+
+    <div class="page">
+
+      <button class="btn light full"
+              onclick="kelilingApp()">
+        ← Kembali
+      </button>
+
+      <div class="panel">
+        <h3>📦 Stok Sayuran</h3>
+        <p>
+          Atur jumlah stok yang dibawa untuk berjualan keliling.
+        </p>
+      </div>
+
+      <div id="kelilingStockList"></div>
+
+    </div>
+  `;
+
+  renderKelilingStock();
+}
+function renderKelilingStock(){
+
+  const box=document.getElementById("kelilingStockList");
+
+  if(!box)return;
+
+  if(!products || !products.length){
+
+    box.innerHTML=`
+      <div class="panel">
+        <p>Belum ada produk.</p>
+      </div>
+    `;
+
+    return;
+  }
+
+  box.innerHTML=products.map(p=>`
+
+    <div class="panel">
+
+      <b>${p.emoji||"🥬"} ${p.name}</b><br>
+
+      <small>
+        Harga: ${rp(p.price)}
+        ${p.unit ? " / "+p.unit : ""}
+      </small>
+
+      <label style="
+        display:block;
+        margin-top:10px">
+        Stok dibawa
+      </label>
+
+      <input
+        id="kelilingStock_${p.id}"
+        class="input"
+        type="number"
+        min="0"
+        value="0"
+        placeholder="Jumlah stok">
+
+    </div>
+
+  `).join("");
+
 }
 function courierApp(){
   document.getElementById("app").innerHTML=`
