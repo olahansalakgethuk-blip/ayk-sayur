@@ -43,6 +43,7 @@ products=products.map(p=>({...p,package5k:p.package5k!==false,packageUnit:p.pack
 let orders=JSON.parse(localStorage.getItem("aykOrders")||"[]"),cart={},role=null;
 let branches=JSON.parse(localStorage.getItem("aykBranches")||"null")||[{id:"pusat",name:"AYK SAYUR Pusat",address:"Dusun Kemiren RT 04/RW 02, Desa Kemiren, Kecamatan Srumbung, Kabupaten Magelang"}];
 let couriers=JSON.parse(localStorage.getItem("aykCouriers")||"null")||[];
+let kelilingSellers=JSON.parse(localStorage.getItem("aykKelilingSellers")||"null")||[];
 let currentCourierId=null;
 let currentCourierName="";
 let branchCoords=JSON.parse(localStorage.getItem("aykBranchCoords")||"null")||{"pusat":{lat:-7.597361,lon:110.364056}};
