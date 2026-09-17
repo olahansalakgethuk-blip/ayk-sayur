@@ -1034,13 +1034,36 @@ async function saveKelilingTransaction(){
     return;
   }
 
-  const harga =
-    Number(product.price)||0;
-
-  const total =
-    harga * qty;
-
   try{
+
+    const {data:stockData,error:stockError}=await sb
+      .from("stok_penjual_keliling")
+      .select("stok,harga_jual")
+      .eq("penjual_id",currentKelilingSellerId)
+      .eq("produk_id",product.id)
+      .maybeSingle();
+
+    if(stockError)throw stockError;
+
+    if(!stockData){
+      toast("Produk belum diatur di stok penjual keliling");
+      return;
+    }
+
+    const stokTersedia=Number(stockData.stok)||0;
+    const harga=Number(stockData.harga_jual)||0;
+
+    if(harga<=0){
+      toast("Harga jual keliling belum diatur");
+      return;
+    }
+
+    if(qty>stokTersedia){
+      toast("Stok tidak mencukupi");
+      return;
+    }
+
+    const total=harga*qty;
 
     const {error}=await sb
       .from("transaksi_penjual_keliling")
