@@ -853,6 +853,54 @@ function changeCart(key,delta){let [id,type]=key.split(":");let p=products.find(
 function cartLines(){return Object.entries(cart).map(([key,q])=>{let [id,type]=key.split(":");let p=products.find(x=>x.id==id);let price=type==="package"?5000:p.price;return {key,id,type,q,p,price,lineTotal:price*q}})}
 function getCartSubtotal(){return cartLines().reduce((s,x)=>s+x.lineTotal,0)}
 function updateCart(){let n=Object.values(cart).reduce((s,q)=>s+q,0),t=getCartSubtotal();let c=document.getElementById("cartCount"),ct=document.getElementById("cartTotal");if(c)c.textContent=n;if(ct)ct.textContent=rp(t);updateCheckoutTotal()}
+function changeOrderType(){
+
+  const type=document.getElementById("orderType")?.value;
+
+  const address=document.getElementById("ba");
+  const shippingPanel=document.getElementById("shippingPanel");
+  const shipInfo=document.getElementById("shipInfo");
+
+  if(type==="PICKUP"){
+
+    if(address){
+      address.style.display="none";
+      address.value="";
+    }
+
+    if(shippingPanel){
+      shippingPanel.style.display="none";
+    }
+
+    if(shipInfo){
+      shipInfo.style.display="none";
+      shipInfo.innerHTML="";
+    }
+
+  }else{
+
+    if(address){
+      address.style.display="block";
+      address.placeholder=
+        type==="KELILING"
+        ? "Wilayah jual keliling"
+        : "Alamat pengiriman";
+    }
+
+    if(shippingPanel){
+      shippingPanel.style.display=
+        type==="DELIVERY" ? "block" : "none";
+    }
+
+    if(shipInfo){
+      shipInfo.style.display=
+        type==="DELIVERY" ? "block" : "none";
+    }
+
+  }
+
+  updateCheckoutTotal();
+}
 function renderCartModal(){let ci=document.getElementById("ci");if(!ci)return;let lines=cartLines();ci.innerHTML=lines.length?lines.map(x=>`<div class="row" style="gap:8px;align-items:center;margin-bottom:8px"><span style="flex:1">${x.p.emoji||"🥦"} ${x.p.name} ${x.type==="package"?"🎁 5K":""}<br><small>${rp(x.price)} × ${x.q} = <b>${rp(x.lineTotal)}</b></small></span><span style="display:flex;gap:4px"><button class="btn light" onclick="changeCart('${x.key}',-1)">−</button><b style="padding:8px 4px">${x.q}</b><button class="btn light" onclick="changeCart('${x.key}',1)">+</button><button class="btn red" onclick="changeCart('${x.key}',-${x.q})">🗑️</button></span></div>`).join(""):"<p>Keranjang kosong.</p>";updateCart()}
 function openCart(){
   let lines=cartLines();
