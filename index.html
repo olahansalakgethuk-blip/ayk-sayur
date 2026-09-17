@@ -46,6 +46,10 @@ let couriers=JSON.parse(localStorage.getItem("aykCouriers")||"null")||[];
 let kelilingSellers=JSON.parse(localStorage.getItem("aykKelilingSellers")||"null")||[];
 let currentCourierId=null;
 let currentCourierName="";
+  
+let currentKelilingSellerId=null;
+let currentKelilingSellerName="";
+  
 let branchCoords=JSON.parse(localStorage.getItem("aykBranchCoords")||"null")||{"pusat":{lat:-7.597361,lon:110.364056}};
 if(!branchCoords.pusat)branchCoords.pusat={lat:-7.597361,lon:110.364056};
 let branchOverrides={}; let branchAdmins=[]; let adminMode="pusat"; let currentBranchId="pusat";
@@ -498,6 +502,88 @@ function showHomeMenu(){
 </div>
 `;
 }
+function kelilingApp(){
+
+  document.getElementById("app").innerHTML=`
+
+    <header style="display:flex;align-items:center;gap:15px">
+
+      <div style="width:90px;text-align:center">
+        <span style="font-size:42px">🛺</span>
+      </div>
+
+      <div style="text-align:left">
+        <h1 style="margin:0">AYK SAYUR</h1>
+        <p style="margin:4px 0 0">
+          Penjual Keliling
+        </p>
+      </div>
+
+    </header>
+
+    <div class="page">
+
+      <div class="panel">
+
+        <h2>🛺 Penjual Keliling</h2>
+
+        <p>
+          Selamat datang,
+          <b>${currentKelilingSellerName||"Penjual"}</b>
+        </p>
+
+        <p>
+          Kelola penjualan sayuran keliling Anda
+          dari halaman ini.
+        </p>
+
+      </div>
+
+      <div class="role-card">
+
+        <div class="role-icon">📦</div>
+
+        <b>STOK PRODUK</b>
+
+        <small>
+          Lihat dan kelola stok sayuran
+        </small>
+
+      </div>
+
+      <div class="role-card">
+
+        <div class="role-icon">🧾</div>
+
+        <b>TRANSAKSI</b>
+
+        <small>
+          Lihat transaksi penjualan keliling
+        </small>
+
+      </div>
+
+      <div class="role-card">
+
+        <div class="role-icon">📊</div>
+
+        <b>LAPORAN</b>
+
+        <small>
+          Lihat laporan penjualan
+        </small>
+
+      </div>
+
+      <button class="btn light full"
+              style="margin-top:15px"
+              onclick="landing()">
+        ← Keluar
+      </button>
+
+    </div>
+  `;
+}
 function courierApp(){
   document.getElementById("app").innerHTML=`
     <header>
@@ -890,6 +976,48 @@ async function checkCourier(){
 
   await loadOnlineData();
   courierApp();
+}
+  async function checkKeliling(){
+
+  let username=document.getElementById("kelilingUsername").value.trim();
+  let password=document.getElementById("kelilingPassword").value;
+
+  if(!username){
+    toast("Username wajib diisi");
+    return;
+  }
+
+  if(!password){
+    toast("Password wajib diisi");
+    return;
+  }
+
+  let seller=kelilingSellers.find(
+    x=>String(x.username||"").toLowerCase()===username.toLowerCase()
+  );
+
+  if(!seller){
+    toast("Username penjual keliling tidak ditemukan");
+    return;
+  }
+
+  if(!seller.aktif){
+    toast("Akun penjual keliling sedang nonaktif");
+    return;
+  }
+
+  if(String(seller.password||"")!==String(password)){
+    toast("Password penjual keliling salah");
+    return;
+  }
+
+  role="keliling";
+  currentKelilingSellerId=seller.id;
+  currentKelilingSellerName=seller.nama;
+
+  await loadOnlineData();
+
+  kelilingApp();
 }
 function toggleCourierPassword(){
   const input = document.getElementById("courierPassword");
