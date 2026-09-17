@@ -813,10 +813,26 @@ async function saveKelilingStock(){
 
   }
 }
-  function kelilingTransactions(){
+  async function kelilingTransactions(){
+
+  try{
+
+    const {data,error}=await sb
+      .from("stok_penjual_keliling")
+      .select("*")
+      .eq("penjual_id",currentKelilingSellerId);
+
+    if(error)throw error;
+
+    window.kelilingStockData=data||[];
+
+  }catch(e){
+
+    window.kelilingStockData=[];
+
+  }
 
   document.getElementById("app").innerHTML=`
-
     <header>
       <h1>🧾 Transaksi Penjual Keliling</h1>
       <p>${currentKelilingSellerName||"Penjual Keliling"}</p>
