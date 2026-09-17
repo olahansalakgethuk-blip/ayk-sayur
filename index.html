@@ -668,36 +668,63 @@ function renderKelilingStock(){
       <b>${p.emoji||"🥬"} ${p.name}</b><br>
 
       <small>
-        Harga: ${rp(p.price)}
+        Harga dasar AYK SAYUR:
+        <b>${rp(p.price)}</b>
         ${p.unit ? " / "+p.unit : ""}
       </small>
 
       <label style="
         display:block;
         margin-top:10px">
-        Stok dibawa
+        📦 Stok dibawa
       </label>
 
       <input
-  id="kelilingStock_${p.id}"
-  class="input"
-  type="number"
-  min="0"
-  value="${
-    (window.kelilingStockData||[]).find(
-      x=>String(x.produk_id)===String(p.id)
-    )?.stok ?? 0
-  }"
-  placeholder="Jumlah stok">
-  </div>
+        id="kelilingStock_${p.id}"
+        class="input"
+        type="number"
+        min="0"
+        value="${
+          (window.kelilingStockData||[]).find(
+            x=>String(x.produk_id)===String(p.id)
+          )?.stok ?? 0
+        }"
+        placeholder="Jumlah stok">
 
-   `).join("");
+      <label style="
+        display:block;
+        margin-top:10px">
+        💵 Harga jual keliling
+      </label>
+
+      <input
+        id="kelilingPrice_${p.id}"
+        class="input"
+        type="number"
+        min="0"
+        value="${p.price||0}"
+        placeholder="Harga jual keliling">
+
+      <small style="
+        display:block;
+        margin-top:6px;
+        color:#287a3d">
+        📈 Keuntungan:
+        <b id="kelilingProfit_${p.id}">
+          ${rp(0)}
+        </b>
+        / ${p.unit||"unit"}
+      </small>
+
+    </div>
+
+  `).join("");
 
   box.innerHTML += `
     <button class="btn green full"
             style="margin-top:10px"
             onclick="saveKelilingStock()">
-      💾 Simpan Stok
+      💾 Simpan Stok & Harga
     </button>
   `;
 
