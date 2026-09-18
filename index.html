@@ -1005,7 +1005,72 @@ async function kelilingReport(){
         </p>
 
       </div>
+      <div class="panel">
 
+        <h3>📦 Detail Penjualan per Produk</h3>
+
+        ${Object.values(
+          transaksi.reduce((hasil,t)=>{
+
+            if(!hasil[t.produk_id]){
+              hasil[t.produk_id]={
+                produk_id:t.produk_id,
+                jumlah:0,
+                omzet:0,
+                keuntungan:0
+              };
+            }
+
+            hasil[t.produk_id].jumlah += Number(t.jumlah||0);
+            hasil[t.produk_id].omzet += Number(t.total||0);
+            hasil[t.produk_id].keuntungan += Number(t.keuntungan||0);
+
+            return hasil;
+
+          },{})
+        ).map(x=>{
+
+          const product=products.find(
+            p=>String(p.id)===String(x.produk_id)
+          );
+
+          return `
+            <div style="
+              padding:10px 0;
+              border-bottom:1px solid #ddd">
+
+              <b>
+                ${product?.emoji||"🥬"}
+                ${product?.name||"Produk"}
+              </b>
+
+              <br>
+
+              <small>
+                Terjual: <b>${x.jumlah}</b>
+              </small>
+
+              <br>
+
+              <small>
+                Omzet: <b>${rp(x.omzet)}</b>
+              </small>
+
+              <br>
+
+              <small>
+                Keuntungan:
+                <b>${rp(x.keuntungan)}</b>
+              </small>
+
+            </div>
+          `;
+
+        }).join("") || `
+          <p>Belum ada penjualan.</p>
+        `}
+
+      </div>
     `;
 
   }catch(e){
