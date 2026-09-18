@@ -1115,12 +1115,13 @@ const stokBaru=stokTersedia-qty;
 const {error}=await sb
   .from("transaksi_penjual_keliling")
       .insert({
-        penjual_id:currentKelilingSellerId,
-        produk_id:product.id,
-        jumlah:qty,
-        harga:harga,
-        total:total,
-        pembayaran:payment
+       penjual_id:currentKelilingSellerId,
+produk_id:product.id,
+jumlah:qty,
+harga:harga,
+total:total,
+keuntungan:(harga-Number(product.cost||0))*qty,
+pembayaran:payment
       });
 
        if(error)throw error;
