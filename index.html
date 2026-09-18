@@ -948,25 +948,87 @@ async function kelilingReport(){
         ← Kembali
       </button>
 
-      <div id="kelilingReportBox">
+      <div class="panel">
 
-        <div class="panel">
-          <p>⏳ Memuat laporan...</p>
-        </div>
+  <b>📅 Periode Laporan</b>
 
-      </div>
+  <select id="kelilingReportPeriod"
+          class="input"
+          onchange="kelilingReport()">
 
-    </div>
+    <option value="today">Hari Ini</option>
+    <option value="7days">7 Hari Terakhir</option>
+    <option value="month">Bulan Ini</option>
+    <option value="all">Semua Transaksi</option>
+
+  </select>
+
+</div>
+
+<div id="kelilingReportBox">
+
+  <div class="panel">
+    <p>⏳ Memuat laporan...</p>
+  </div>
+
+</div>
   `;
 
   try{
 
-    const {data,error}=await sb
-      .from("transaksi_penjual_keliling")
-      .select("*")
-      .eq("penjual_id",currentKelilingSellerId)
-      .order("created_at",{ascending:false});
+    const periode =
+  document.getElementById("kelilingReportPeriod")?.value || "today";
 
+let query=sb
+  .from("transaksi_penjual_keliling")
+  .select("*")
+  .eq("penjual_id",currentKelilingSellerId);
+
+const sekarang=new Date();
+
+if(periode==="today"){
+
+  const awalHari=new Date();
+  awalHari.setHours(0,0,0,0);
+
+  query=query.gte(
+    "created_at",
+    awalHari.toISOString()
+  );
+
+}
+
+if(periode==="7days"){
+
+  const tujuhHariLalu=new Date();
+  tujuhHariLalu.setDate(
+    sekarang.getDate()-7
+  );
+
+  query=query.gte(
+    "created_at",
+    tujuhHariLalu.toISOString()
+  );
+
+}
+
+if(periode==="month"){
+
+  const awalBulan=new Date(
+    sekarang.getFullYear(),
+    sekarang.getMonth(),
+    1
+  );
+
+  query=query.gte(
+    "created_at",
+    awalBulan.toISOString()
+  );
+
+}
+
+const {data,error}=await query
+  .order("created_at",{ascending:false});
     if(error)throw error;
 
     const transaksi=data||[];
