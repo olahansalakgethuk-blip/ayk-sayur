@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AYK SAYUR V7</title>
-<style>
+<title>AYK SAYUR V7</title><style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#eef3ec;color:#1d2920}.app{max-width:480px;margin:auto;min-height:100vh;background:#fff;padding-bottom:75px}
 header{background:#287a3d;color:white;padding:22px 18px;border-radius:0 0 22px 22px}header h1{margin:0;font-size:28px}header p{margin:5px 0 0}.page{padding:16px}
 .role{margin-top:35px;text-align:center}.role h2{font-size:22px}.role-card{border:1px solid #dce6da;border-radius:17px;padding:18px;margin:12px 0;cursor:pointer;background:#fff}.role-card:hover{background:#f3f8f1}.role-icon{font-size:40px}.role-card b{display:block;font-size:18px;margin:6px}.role-card small{color:#6b746c}
@@ -2428,78 +2435,140 @@ Hapus
         </div>
       `).join("")||"<p>Belum ada kurir.</p>"}
     </div>`;
-      }else if(which==="keliling"){
-    c.innerHTML=`<h2>🛺 Manajemen Penjual Keliling</h2>
+       }else if(which==="keliling"){
+    c.innerHTML=`
+      <h2>🛺 Manajemen Penjual Keliling</h2>
 
-    <div class="panel">
-      <b>➕ Tambah Penjual Keliling</b>
-
-      <input id="knmKeliling"
-             class="input"
-             placeholder="Nama penjual">
-
-      <input id="kwaKeliling"
-             class="input"
-             placeholder="Nomor WhatsApp">
-
-      <input id="kuserKeliling"
-             class="input"
-             placeholder="Username login">
-
-      <input id="kpassKeliling"
-             class="input"
-             type="password"
-             placeholder="Password">
-
-      <input id="kwilayahKeliling"
-             class="input"
-             placeholder="Wilayah jual keliling">
-
-      <button class="btn green full"
-              onclick="addKelilingSeller()">
-        Tambah Penjual Keliling
-      </button>
-    </div>
-
-    <div class="panel">
-      <b>🛺 Daftar Penjual Keliling</b>
-
-      ${kelilingSellers.map(k=>`
-        <div class="panel">
-
-          <b>🛺 ${k.nama}</b><br>
-
-          <small>
-            WhatsApp: ${k.whatsapp||"-"}
-          </small><br>
-
-          <small>
-            Username: ${k.username||"-"}
-          </small><br>
-
-          <small>
-            Wilayah: ${k.wilayah||"-"}
-          </small><br>
-
-          <small>
-            Status: ${k.aktif?"Aktif":"Nonaktif"}
-          </small><br>
-
-          <button class="btn light"
-                  onclick="toggleKelilingSeller(${k.id})">
-            ${k.aktif?"🔴 Nonaktifkan":"🟢 Aktifkan"}
-          </button>
-
+      <div class="panel">
+        <h3>📍 Posisi Penjual Keliling</h3>
+        <div id="adminKelilingMap"
+             style="height:400px;border-radius:10px">
         </div>
-      `).join("")||"<p>Belum ada penjual keliling.</p>"}
+      </div>
 
-    </div>`;
+      <div class="panel">
+        <b>➕ Tambah Penjual Keliling</b>
+
+        <input id="knmKeliling"
+               class="input"
+               placeholder="Nama penjual">
+
+        <input id="kwaKeliling"
+               class="input"
+               placeholder="Nomor WhatsApp">
+
+        <input id="kuserKeliling"
+               class="input"
+               placeholder="Username login">
+
+        <input id="kpassKeliling"
+               class="input"
+               type="password"
+               placeholder="Password">
+
+        <input id="kwilayahKeliling"
+               class="input"
+               placeholder="Wilayah jual keliling">
+
+        <button class="btn green full"
+                onclick="addKelilingSeller()">
+          Tambah Penjual Keliling
+        </button>
+      </div>
+
+      <div class="panel">
+        <b>🛺 Daftar Penjual Keliling</b>
+
+        ${kelilingSellers.map(k=>`
+          <div class="panel">
+
+            <b>🛺 ${k.nama}</b><br>
+
+            <small>
+              WhatsApp: ${k.whatsapp||"-"}
+            </small><br>
+
+            <small>
+              Username: ${k.username||"-"}
+            </small><br>
+
+            <small>
+              Wilayah: ${k.wilayah||"-"}
+            </small><br>
+
+            <small>
+              Status: ${k.aktif?"Aktif":"Nonaktif"}
+            </small><br>
+
+            <button class="btn light"
+                    onclick="toggleKelilingSeller(${k.id})">
+              ${k.aktif?"🔴 Nonaktifkan":"🟢 Aktifkan"}
+            </button>
+
+          </div>
+        `).join("")||"<p>Belum ada penjual keliling.</p>"}
+
+      </div>
+    `;
+
+    setTimeout(initAdminKelilingMap,100);
   }else if(which==="report"){
     renderAdminReport(c);
   }else{
     c.innerHTML=`<h2>🧾 Pesanan</h2><button class="btn green full" onclick="refreshAdminOrders()">🔄 Refresh Pesanan Online</button><div id="orderList">${renderAdminOrders()}</div>`;
     if(sbReady)refreshAdminOrders();
   }
+}
+function initAdminKelilingMap(){
+
+  const mapBox=document.getElementById("adminKelilingMap");
+
+  if(!mapBox || typeof L==="undefined"){
+    return;
+  }
+
+  const map=L.map("adminKelilingMap").setView(
+    [-7.55,110.60],
+    10
+  );
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      attribution:"© OpenStreetMap"
+    }
+  ).addTo(map);
+
+  sb
+    .from("lokasi_penjual_keliling")
+    .select("*")
+    .eq("aktif",true)
+    .then(({data,error})=>{
+
+      if(error){
+        console.error(
+          "Gagal mengambil lokasi penjual:",
+          error
+        );
+        return;
+      }
+
+      (data||[]).forEach(lokasi=>{
+
+        L.marker([
+          Number(lokasi.latitude),
+          Number(lokasi.longitude)
+        ])
+        .addTo(map)
+        .bindPopup(
+          "🛺 Penjual Keliling<br>"+
+          "ID: "+lokasi.penjual_id
+        );
+
+      });
+
+    });
+
 }
 async function addCourier(){
   let nama=document.getElementById("knm").value.trim();
