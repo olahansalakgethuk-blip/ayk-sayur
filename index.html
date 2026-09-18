@@ -2555,10 +2555,19 @@ function initAdminKelilingMap(){
 
       (data||[]).forEach(lokasi=>{
 
-        L.marker([
-          Number(lokasi.latitude),
-          Number(lokasi.longitude)
-        ])
+       const iconKeliling=L.divIcon({
+  html:"🛺",
+  className:"",
+  iconSize:[40,40],
+  iconAnchor:[20,20]
+});
+
+L.marker([
+  Number(lokasi.latitude),
+  Number(lokasi.longitude)
+],{
+  icon:iconKeliling
+})
         .addTo(map)
         .bindPopup(
           "🛺 Penjual Keliling<br>"+
