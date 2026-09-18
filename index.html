@@ -807,6 +807,73 @@ async function saveKelilingStock(){
 
   }
 }
+function mulaiLokasiKeliling(){
+
+  if(!currentKelilingSellerId){
+    return;
+  }
+
+  if(!navigator.geolocation){
+    toast("GPS tidak tersedia di perangkat ini");
+    return;
+  }
+
+  navigator.geolocation.watchPosition(
+
+    async function(pos){
+
+      const latitude=pos.coords.latitude;
+      const longitude=pos.coords.longitude;
+
+      try{
+
+        const {error}=await sb
+          .from("lokasi_penjual_keliling")
+          .upsert({
+            penjual_id:currentKelilingSellerId,
+            latitude:latitude,
+            longitude:longitude,
+            aktif:true,
+            updated_at:new Date().toISOString()
+          },{
+            onConflict:"penjual_id"
+          });
+
+        if(error){
+          console.error(
+            "Gagal menyimpan lokasi:",
+            error
+          );
+        }
+
+      }catch(e){
+
+        console.error(
+          "GPS error:",
+          e
+        );
+
+      }
+
+    },
+
+    function(error){
+
+      console.error(
+        "GPS tidak dapat mengambil lokasi:",
+        error
+      );
+
+    },
+
+    {
+      enableHighAccuracy:true,
+      maximumAge:10000,
+      timeout:15000
+    }
+
+  );
+}
   async function kelilingTransactions(){
 
   try{
@@ -1802,6 +1869,7 @@ async function checkCourier(){
   currentKelilingSellerId=seller.id;
   currentKelilingSellerName=seller.nama;
 
+    mulaiLokasiKeliling();
   await loadOnlineData();
 
   kelilingApp();
