@@ -2539,44 +2539,71 @@ function initAdminKelilingMap(){
     }
   ).addTo(map);
 
-  sb
-    .from("lokasi_penjual_keliling")
-    .select("*")
-    .eq("aktif",true)
-    .then(({data,error})=>{
+  const iconKeliling=L.divIcon({
+    html:"🛺",
+    className:"",
+    iconSize:[40,40],
+    iconAnchor:[20,20]
+  });
 
-      if(error){
-        console.error(
-          "Gagal mengambil lokasi penjual:",
-          error
-        );
+  const markers={};
+
+  async function updateKelilingMarkers(){
+
+    const {data,error}=await sb
+      .from("lokasi_penjual_keliling")
+      .select("*")
+      .eq("aktif",true);
+
+    if(error){
+      console.error(
+        "Gagal mengambil lokasi penjual:",
+        error
+      );
+      return;
+    }
+
+    (data||[]).forEach(lokasi=>{
+
+      const lat=Number(lokasi.latitude);
+      const lng=Number(lokasi.longitude);
+
+      if(!Number.isFinite(lat) || !Number.isFinite(lng)){
         return;
       }
 
-      (data||[]).forEach(lokasi=>{
+      if(!markers[lokasi.penjual_id]){
 
-       const iconKeliling=L.divIcon({
-  html:"🛺",
-  className:"",
-  iconSize:[40,40],
-  iconAnchor:[20,20]
-});
-
-L.marker([
-  Number(lokasi.latitude),
-  Number(lokasi.longitude)
-],{
-  icon:iconKeliling
-})
+        markers[lokasi.penjual_id]=L.marker(
+          [lat,lng],
+          {
+            icon:iconKeliling
+          }
+        )
         .addTo(map)
         .bindPopup(
           "🛺 Penjual Keliling<br>"+
           "ID: "+lokasi.penjual_id
         );
 
-      });
+      }else{
+
+        markers[lokasi.penjual_id].setLatLng(
+          [lat,lng]
+        );
+
+      }
 
     });
+
+  }
+
+  updateKelilingMarkers();
+
+  setInterval(
+    updateKelilingMarkers,
+    10000
+  );
 
 }
 async function addCourier(){
