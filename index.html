@@ -1804,6 +1804,19 @@ function kelilingLogin(){
     </div>
   `;
 }
+function toggleKelilingPassword(){
+
+  const input=document.getElementById("kelilingPassword");
+
+  if(!input){
+    return;
+  }
+
+  input.type =
+    input.type==="password"
+      ? "text"
+      : "password";
+}
 function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
 function checkAdmin(){let type=document.getElementById("adminType").value; if(type==="pusat"){if(document.getElementById("adminPass").value===getAdminPassword()){role="admin";adminMode="pusat";currentBranchId="pusat";adminApp()}else toast("Password salah")}else{let id=document.getElementById("loginBranch").value,pass=document.getElementById("adminPass").value;let u=branchAdmins.find(x=>String(x.branchId)===String(id))||JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));if(u&&u.password===pass){role="admin";adminMode="cabang";currentBranchId=id;adminApp()}else toast("Password cabang salah")}}
 async function checkCourier(){
