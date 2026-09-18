@@ -1220,8 +1220,14 @@ async function renderKelilingTransactions(){
               <br>
 
               <small>
-                ${t.jumlah} × ${rp(t.harga)}
-              </small>
+  📅 ${new Date(t.created_at).toLocaleString("id-ID")}
+</small>
+
+<br>
+
+<small>
+  ${t.jumlah} × ${rp(t.harga)}
+</small>
 
               <br>
 
@@ -1241,8 +1247,7 @@ async function renderKelilingTransactions(){
         }).join("")}
 
       </div>
-    `;
-
+     
   }catch(e){
 
     box.innerHTML=`
