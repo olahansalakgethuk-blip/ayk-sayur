@@ -561,17 +561,11 @@ function kelilingApp(){
   </small>
 
 </div>
-      <div class="role-card">
-
-        <div class="role-icon">📊</div>
-
-        <b>LAPORAN</b>
-
-        <small>
-          Lihat laporan penjualan
-        </small>
-
-      </div>
+      <div class="role-card" onclick="kelilingReport()">
+  <div class="role-icon">📊</div>
+  <b>LAPORAN</b>
+  <small>Lihat laporan penjualan</small>
+</div>
 
       <button class="btn light full"
               style="margin-top:15px"
@@ -937,6 +931,99 @@ async function saveKelilingStock(){
   `;
 
   renderKelilingTransactions();
+}
+async function kelilingReport(){
+
+  document.getElementById("app").innerHTML=`
+
+    <header>
+      <h1>📊 Laporan Penjual Keliling</h1>
+      <p>${currentKelilingSellerName||"Penjual Keliling"}</p>
+    </header>
+
+    <div class="page">
+
+      <button class="btn light full"
+              onclick="kelilingApp()">
+        ← Kembali
+      </button>
+
+      <div id="kelilingReportBox">
+
+        <div class="panel">
+          <p>⏳ Memuat laporan...</p>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+
+  try{
+
+    const {data,error}=await sb
+      .from("transaksi_penjual_keliling")
+      .select("*")
+      .eq("penjual_id",currentKelilingSellerId)
+      .order("created_at",{ascending:false});
+
+    if(error)throw error;
+
+    const transaksi=data||[];
+
+    const omzet=transaksi.reduce(
+      (sum,t)=>sum+Number(t.total||0),
+      0
+    );
+
+    const keuntungan=transaksi.reduce(
+      (sum,t)=>sum+Number(t.keuntungan||0),
+      0
+    );
+
+    const jumlahTransaksi=transaksi.length;
+
+    document.getElementById("kelilingReportBox").innerHTML=`
+
+      <div class="panel">
+
+        <h3>📊 Ringkasan Penjualan</h3>
+
+        <p>
+          🧾 Jumlah Transaksi:
+          <b>${jumlahTransaksi}</b>
+        </p>
+
+        <p>
+          💰 Total Penjualan:
+          <b>${rp(omzet)}</b>
+        </p>
+
+        <p>
+          📈 Total Keuntungan:
+          <b>${rp(keuntungan)}</b>
+        </p>
+
+      </div>
+
+    `;
+
+  }catch(e){
+
+    document.getElementById("kelilingReportBox").innerHTML=`
+
+      <div class="panel">
+
+        <p>❌ Gagal memuat laporan.</p>
+
+        <small>${e.message}</small>
+
+      </div>
+
+    `;
+
+  }
+
 }
 async function renderKelilingTransactions(){
 
