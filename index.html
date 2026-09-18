@@ -1705,7 +1705,25 @@ async function finishCourierOrder(id){
     toast("Gagal menyelesaikan pesanan: "+e.message);
   }
 }
-function getAdminPassword(){return localStorage.getItem("aykAdminPassword")||"1234"}
+async function getAdminPassword(){
+
+  if(sbReady){
+
+    const {data,error}=await sb
+      .from("pengaturan_admin")
+      .select("password")
+      .eq("id",1)
+      .single();
+
+    if(!error && data?.password
+      ){
+      return String(data.password);
+    }
+
+  }
+
+  return localStorage.getItem("aykAdminPassword")||"1234";
+}
 function courierLogin(){
   document.getElementById("app").innerHTML=`
     <header style="display:flex;align-items:center;gap:15px">
@@ -1830,7 +1848,58 @@ function toggleKelilingPassword(){
       : "password";
 }
 function toggleBranchLogin(){let t=document.getElementById("adminType")?.value,b=document.getElementById("branchLoginBox");if(b)b.style.display=t==="cabang"?"block":"none"}
-function checkAdmin(){let type=document.getElementById("adminType").value; if(type==="pusat"){if(document.getElementById("adminPass").value===getAdminPassword()){role="admin";adminMode="pusat";currentBranchId="pusat";adminApp()}else toast("Password salah")}else{let id=document.getElementById("loginBranch").value,pass=document.getElementById("adminPass").value;let u=branchAdmins.find(x=>String(x.branchId)===String(id))||JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));if(u&&u.password===pass){role="admin";adminMode="cabang";currentBranchId=id;adminApp()}else toast("Password cabang salah")}}
+async function checkAdmin(){
+
+  let type=document.getElementById("adminType").value;
+
+  if(type==="pusat"){
+
+    let pass=document.getElementById("adminPass").value;
+    let adminPassword=await getAdminPassword();
+
+    if(pass===adminPassword){
+
+      role="admin";
+      adminMode="pusat";
+      currentBranchId="pusat";
+      adminApp();
+
+    }else{
+
+      toast("Password salah");
+
+    }
+
+  }else{
+
+    let id=document.getElementById("loginBranch").value;
+    let pass=document.getElementById("adminPass").value;
+
+    let u=
+      branchAdmins.find(
+        x=>String(x.branchId)===String(id)
+      )||
+      JSON.parse(
+        localStorage.getItem("aykBranchAdmins")||"[]"
+      ).find(
+        x=>String(x.branchId)===String(id)
+      );
+
+    if(u&&u.password===pass){
+
+      role="admin";
+      adminMode="cabang";
+      currentBranchId=id;
+      adminApp();
+
+    }else{
+
+      toast("Password cabang salah");
+
+    }
+
+  }
+}
 async function checkCourier(){
   let id=document.getElementById("courierSelect").value;
   let password=document.getElementById("courierPassword").value;
@@ -1913,8 +1982,52 @@ function toggleCourierPassword(){
 
   input.type = input.type === "password" ? "text" : "password";
 }
-function changeAdminPassword(){let old=document.getElementById("oldAdminPass").value,newp=document.getElementById("newAdminPass").value,conf=document.getElementById("confirmAdminPass").value;if(old!==getAdminPassword())return toast("Password lama salah");if(newp.length<6)return toast("Password baru minimal 6 karakter");if(newp!==conf)return toast("Konfirmasi password tidak sama");localStorage.setItem("aykAdminPassword",newp);toast("Password admin berhasil diganti");document.getElementById("oldAdminPass").value="";document.getElementById("newAdminPass").value="";document.getElementById("confirmAdminPass").value=""}
-function buyerLogin(){
+async function changeAdminPassword(){
+
+  let old=document.getElementById("oldAdminPass").value;
+  let newp=document.getElementById("newAdminPass").value;
+  let conf=document.getElementById("confirmAdminPass").value;
+
+  let adminPassword=await getAdminPassword();
+
+  if(old!==adminPassword){
+    return toast("Password lama salah");
+  }
+
+  if(newp.length<6){
+    return toast("Password baru minimal 6 karakter");
+  }
+
+  if(newp!==conf){
+    return toast("Konfirmasi password tidak sama");
+  }
+
+  if(sbReady){
+
+    const {error}=await sb
+      .from("pengaturan_admin")
+      .update({
+        password:newp,
+        updated_at:new Date().toISOString()
+      })
+      .eq("id",1);
+
+    if(error){
+      console.error(error);
+      return toast("Gagal menyimpan password online: "+error.message);
+    }
+
+  }
+
+  localStorage.setItem("aykAdminPassword",newp);
+
+  toast("Password admin berhasil diganti");
+
+  document.getElementById("oldAdminPass").value="";
+  document.getElementById("newAdminPass").value="";
+  document.getElementById("confirmAdminPass").value="";
+}
+  function buyerLogin(){
   role="buyer";
   buyerApp();
 }
