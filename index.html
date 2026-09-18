@@ -155,6 +155,18 @@ if(!ke){
   couriers=kurirData||[];
   localStorage.setItem("aykCouriers",JSON.stringify(couriers));
 }
+const {data:kelilingData,error:kle}=await sb
+  .from("penjual_keliling")
+  .select("*")
+  .order("id");
+
+if(!kle){
+  kelilingSellers=kelilingData||[];
+  localStorage.setItem(
+    "aykKelilingSellers",
+    JSON.stringify(kelilingSellers)
+  );
+} 
     if(role==="buyer"||adminMode==="cabang") await applyBranchView();
     localStorage.setItem("aykProducts",JSON.stringify(products));
     const {data:ord,error:oe}=await sb.from("pesanan").select("*").order("created_at",{ascending:false}).limit(100);
