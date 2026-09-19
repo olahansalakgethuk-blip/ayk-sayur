@@ -2767,11 +2767,43 @@ kelilingSellers.forEach(k=>{
 );
       }else{
 
-        markers[lokasi.penjual_id].setLatLng(
-          [lat,lng]
-        );
+  const marker=markers[lokasi.penjual_id];
 
-      }
+  const posisiLama=marker.getLatLng();
+
+  const latAwal=posisiLama.lat;
+  const lngAwal=posisiLama.lng;
+
+  const durasi=9000;
+  const mulai=performance.now();
+
+  function gerakMarker(waktu){
+
+    const progress=Math.min(
+      (waktu-mulai)/durasi,
+      1
+    );
+
+    const latSekarang=
+      latAwal+(lat-latAwal)*progress;
+
+    const lngSekarang=
+      lngAwal+(lng-lngAwal)*progress;
+
+    marker.setLatLng([
+      latSekarang,
+      lngSekarang
+    ]);
+
+    if(progress<1){
+      requestAnimationFrame(gerakMarker);
+    }
+
+  }
+
+  requestAnimationFrame(gerakMarker);
+
+}
 
     });
 
