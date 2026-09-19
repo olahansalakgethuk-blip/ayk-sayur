@@ -838,63 +838,98 @@ function mulaiLokasiKeliling(){
   }
 
   console.log("GPS AYK1 mulai dijalankan");
-  navigator.geolocation.watchPosition(
 
-    async function(pos){
+  async function simpanLokasi(pos){
 
-      const latitude=pos.coords.latitude;
-      const longitude=pos.coords.longitude;
+    const latitude=pos.coords.latitude;
+    const longitude=pos.coords.longitude;
 
-      try{
+    console.log(
+      "GPS baru:",
+      latitude,
+      longitude,
+      "akurasi:",
+      pos.coords.accuracy
+    );
 
-        const {error}=await sb
-          .from("lokasi_penjual_keliling")
-          .upsert({
-            penjual_id:currentKelilingSellerId,
-            latitude:latitude,
-            longitude:longitude,
-            aktif:true,
-            updated_at:new Date().toISOString()
-          },{
-            onConflict:"penjual_id"
-          });
+    try{
 
-        if(error){
-          console.error(
-            "Gagal menyimpan lokasi:",
-            error
-          );
-        }
+      const {error}=await sb
+        .from("lokasi_penjual_keliling")
+        .upsert({
+          penjual_id:currentKelilingSellerId,
+          latitude:latitude,
+          longitude:longitude,
+          aktif:true,
+          updated_at:new Date().toISOString()
+        },{
+          onConflict:"penjual_id"
+        });
 
-      }catch(e){
+      if(error){
 
         console.error(
-          "GPS error:",
-          e
+          "Gagal menyimpan lokasi:",
+          error
+        );
+
+      }else{
+
+        console.log(
+          "Lokasi berhasil disimpan:",
+          latitude,
+          longitude
         );
 
       }
 
-    },
+    }catch(e){
 
+      console.error(
+        "GPS error:",
+        e
+      );
+
+    }
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    simpanLokasi,
     function(error){
 
       console.error(
-        "GPS tidak dapat mengambil lokasi:",
+        "GPS awal gagal:",
+        error
+      );
+
+      toast("GPS belum mendapatkan lokasi");
+
+    },
+    {
+      enableHighAccuracy:true,
+      maximumAge:0,
+      timeout:20000
+    }
+  );
+
+  navigator.geolocation.watchPosition(
+    simpanLokasi,
+    function(error){
+
+      console.error(
+        "GPS pemantauan gagal:",
         error
       );
 
     },
-
     {
       enableHighAccuracy:true,
-      maximumAge:10000,
-      timeout:15000
+      maximumAge:0,
+      timeout:20000
     }
-
   );
-}
-  async function kelilingTransactions(){
+
+}  async function kelilingTransactions(){
 
   try{
 
