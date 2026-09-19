@@ -2713,38 +2713,31 @@ function initAdminKelilingMap(){
     }
   ).addTo(map);
 
+  const iconKeliling=L.divIcon({
+    html:"🛺",
+    className:"",
+    iconSize:[40,40],
+    iconAnchor:[20,20]
+  });
+
   const markers={};
 
   async function updateKelilingMarkers(){
 
-    const {data:lokasiData,error:lokasiError}=await sb
+    const {data,error}=await sb
       .from("lokasi_penjual_keliling")
       .select("*")
       .eq("aktif",true);
 
-    if(lokasiError){
+    if(error){
       console.error(
         "Gagal mengambil lokasi penjual:",
-        lokasiError
+        error
       );
       return;
     }
 
-    const {data:penjualData,error:penjualError}=await sb
-      .from("penjual_keliling")
-      .select("id,nama")
-      .eq("aktif",true);
-
-    if(penjualError){
-      console.error(
-        "Gagal mengambil nama penjual:",
-        penjualError
-      );
-    }
-
-    const daftarPenjual=penjualData||[];
-
-    (lokasiData||[]).forEach(lokasi=>{
+    (data||[]).forEach(lokasi=>{
 
       const lat=Number(lokasi.latitude);
       const lng=Number(lokasi.longitude);
@@ -2753,47 +2746,7 @@ function initAdminKelilingMap(){
         return;
       }
 
-      const penjual=daftarPenjual.find(
-        p=>String(p.id)===String(lokasi.penjual_id)
-      );
-
-      const namaPenjual=
-        penjual?.nama || "Penjual Keliling";
-
       if(!markers[lokasi.penjual_id]){
-
-        const iconKeliling=L.divIcon({
-
-          html:`
-            <div style="
-              display:flex;
-              flex-direction:column;
-              align-items:center;
-              white-space:nowrap;
-            ">
-              <div style="font-size:38px">
-                🛺
-              </div>
-
-              <div style="
-                background:white;
-                padding:3px 7px;
-                border-radius:6px;
-                border:1px solid #999;
-                box-shadow:0 1px 4px rgba(0,0,0,.3);
-                font-size:13px;
-                font-weight:bold;
-              ">
-                ${namaPenjual}
-              </div>
-            </div>
-          `,
-
-          className:"",
-          iconSize:[150,75],
-          iconAnchor:[75,65]
-
-        });
 
         markers[lokasi.penjual_id]=L.marker(
           [lat,lng],
@@ -2803,60 +2756,15 @@ function initAdminKelilingMap(){
         )
         .addTo(map)
         .bindPopup(
-          "🛺 <b>"+namaPenjual+"</b><br>"+
-          "Penjual Keliling"
+          "🛺 Penjual Keliling<br>"+
+          "ID: "+lokasi.penjual_id
         );
-
-        markers[lokasi.penjual_id].currentLat=lat;
-        markers[lokasi.penjual_id].currentLng=lng;
 
       }else{
 
-        const marker=markers[lokasi.penjual_id];
-
-        const startLat=marker.currentLat;
-        const startLng=marker.currentLng;
-
-        const endLat=lat;
-        const endLng=lng;
-
-        const durasi=9000;
-        const mulai=performance.now();
-
-        function gerak(waktu){
-
-          const persen=Math.min(
-            (waktu-mulai)/durasi,
-            1
-          );
-
-          const latSekarang=
-            startLat+
-            (endLat-startLat)*persen;
-
-          const lngSekarang=
-            startLng+
-            (endLng-startLng)*persen;
-
-          marker.setLatLng([
-            latSekarang,
-            lngSekarang
-          ]);
-
-          if(persen<1){
-
-            requestAnimationFrame(gerak);
-
-          }else{
-
-            marker.currentLat=endLat;
-            marker.currentLng=endLng;
-
-          }
-
-        }
-
-        requestAnimationFrame(gerak);
+        markers[lokasi.penjual_id].setLatLng(
+          [lat,lng]
+        );
 
       }
 
@@ -2864,6 +2772,14 @@ function initAdminKelilingMap(){
 
   }
 
+  updateKelilingMarkers();
+
+  setInterval(
+    updateKelilingMarkers,
+    10000
+  );
+
+}
   updateKelilingMarkers();
 
   setInterval(
