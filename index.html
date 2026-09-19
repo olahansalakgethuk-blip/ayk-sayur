@@ -2721,7 +2721,11 @@ function initAdminKelilingMap(){
   });
 
   const markers={};
+const namaPenjual={};
 
+kelilingSellers.forEach(k=>{
+  namaPenjual[k.id]=k.nama;
+});
   async function updateKelilingMarkers(){
 
     const {data,error}=await sb
@@ -2756,10 +2760,11 @@ function initAdminKelilingMap(){
         )
         .addTo(map)
         .bindPopup(
-          "🛺 Penjual Keliling<br>"+
-          "ID: "+lokasi.penjual_id
-        );
-
+  "🛺 <b>"+
+  (namaPenjual[lokasi.penjual_id]||"Penjual Keliling")+
+  "</b><br>"+
+  "Penjual Keliling"
+);
       }else{
 
         markers[lokasi.penjual_id].setLatLng(
