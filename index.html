@@ -2570,10 +2570,33 @@ function initBuyerKelilingMap(){
 
         });
 
-        updateMarkers();
+               updateMarkers();
         updateRoutes();
 
-      }
+        if(penjualDipilih!=="semua"){
+
+          const marker=markers[
+            String(penjualDipilih)
+          ];
+
+          if(marker){
+
+            map.flyTo(
+              marker.getLatLng(),
+              16,
+              {
+                animate:true,
+                duration:1
+              }
+            );
+
+            marker.openPopup();
+
+          }
+
+        }
+
+       }
     );
 
   loadPenjual();
