@@ -2833,10 +2833,7 @@ async function geocodeAddress(address){
       queries.push(parts.slice(-2).join(", ")+", Indonesia");
     }
 
-    // Untuk alamat Kemiren - Srumbung - Magelang
-    queries.push("Kemiren, Srumbung, Magelang, Jawa Tengah, Indonesia");
-    queries.push("Srumbung, Magelang, Jawa Tengah, Indonesia");
-
+   
     queries=[...new Set(queries)];
 
     for(let text of queries){
