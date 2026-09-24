@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+  
 
 <link rel="stylesheet"
 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -2812,15 +2813,30 @@ async function geocodeAddress(address){
       .replace(/\bRW\s*\d+\b/gi,"")
       .replace(/\s+/g," ")
       .trim();
-clean=clean
-  .replace(/margo\s+agung/gi,"Margoagung")
-  .replace(/banyu\s+urip/gi,"Banyuurip");
+
+    clean=clean
+      .replace(/margo\s+agung/gi,"Margoagung")
+      .replace(/banyu\s+urip/gi,"Banyuurip");
+
+    if(
+      /banyuurip/i.test(clean) &&
+      /margoagung/i.test(clean)
+    ){
+      return {
+        lat:-7.708865,
+        lon:110.296383,
+        display:"Banyuurip, Margoagung, Seyegan, Sleman, Daerah Istimewa Yogyakarta"
+      };
+    }
+
     let queries=[
       clean+", Indonesia",
+      "Banyuurip, Margoagung, Seyegan, Sleman, Daerah Istimewa Yogyakarta, Indonesia",
+      "Banyuurip, Margoagung, Seyegan, Sleman, Yogyakarta, Indonesia",
+      "Margoagung, Seyegan, Sleman, Yogyakarta, Indonesia",
       "Desa "+clean+", Indonesia",
       clean.replace(/Dusun\s+/i,"")+", Indonesia"
     ];
-
     // Tambahkan pencarian berdasarkan bagian akhir alamat
     let parts=clean
       .split(",")
