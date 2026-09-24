@@ -2673,6 +2673,10 @@ function renderCartModal(){let ci=document.getElementById("ci");if(!ci)return;le
 function openCart(){
   let lines=cartLines();
 
+  if(!lines.length){
+    return toast("Pilih barang terlebih dahulu");
+  }
+
   document.body.insertAdjacentHTML("beforeend",`
     <div class="modal-bg" id="cartModal">
       <div class="modal">
