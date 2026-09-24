@@ -2812,7 +2812,9 @@ async function geocodeAddress(address){
       .replace(/\bRW\s*\d+\b/gi,"")
       .replace(/\s+/g," ")
       .trim();
-
+clean=clean
+  .replace(/margo\s+agung/gi,"Margoagung")
+  .replace(/banyu\s+urip/gi,"Banyuurip");
     let queries=[
       clean+", Indonesia",
       "Desa "+clean+", Indonesia",
