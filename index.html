@@ -2289,6 +2289,64 @@ console.log("DATA PENJUAL:", penjualList);
 
   }
 
+async function loadBuyerKelilingProducts(penjualId){
+
+  const box=document.getElementById("buyerKelilingProducts");
+  if(!box)return;
+
+  if(!penjualId || penjualId==="semua"){
+    box.innerHTML="<p>Silakan pilih satu penjual keliling.</p>";
+    return;
+  }
+
+  box.innerHTML="<p>⏳ Memuat barang yang dibawa penjual...</p>";
+
+  try{
+
+    const {data,error}=await sb
+      .from("stok_penjual_keliling")
+      .select("produk_id,stok,harga_jual")
+      .eq("penjual_id",penjualId)
+      .gt("stok",0);
+
+    if(error)throw error;
+
+    const stok=data||[];
+
+    if(!stok.length){
+      box.innerHTML="<p>Penjual belum memiliki stok barang.</p>";
+      return;
+    }
+
+    const daftar=stok.map(s=>{
+      const p=products.find(
+        x=>String(x.id)===String(s.produk_id)
+      );
+
+      if(!p)return "";
+
+      return `
+        <div class="panel" style="margin-bottom:10px">
+          <b>${p.emoji||"🥬"} ${p.name}</b>
+          <p>Stok: ${s.stok} ${p.unit||"unit"}</p>
+          <b>${rp(Number(s.harga_jual||p.price||0))}</b>
+        </div>
+      `;
+    }).filter(Boolean);
+
+    box.innerHTML=daftar.length
+      ?daftar.join("")
+      :"<p>Data produk tidak ditemukan.</p>";
+
+  }catch(e){
+
+    console.error("Gagal memuat barang:",e);
+    box.innerHTML="<p>Gagal memuat barang: "+e.message+"</p>";
+
+  }
+
+}
+
   async function updateMarkers(){
 
     const {data,error}=await sb
@@ -2495,28 +2553,35 @@ console.log("DATA PENJUAL:", penjualList);
 
   pilihan.style.marginBottom="12px";
 
-  pilihan.innerHTML=`
+  
+pilihan.innerHTML=`
 
-    <label>
-      <b>🛺 Pilih Penjual Keliling</b>
-    </label>
+  <label>
+    <b>🛺 Pilih Penjual Keliling</b>
+  </label>
 
-    <select
-      id="buyerKelilingSeller"
-      class="input"
-      style="margin-top:6px"
-    >
-      <option value="semua">
-        ⏳ Memuat penjual...
-      </option>
-    </select>
+  <select
+    id="buyerKelilingSeller"
+    class="input"
+    style="margin-top:6px"
+  >
+    <option value="semua">
+      ⏳ Memuat penjual...
+    </option>
+  </select>
 
-    <small>
-      Pilih nama penjual untuk melihat posisi dan
-      wilayah jualannya.
-    </small>
+  <small>
+    Pilih penjual untuk melihat lokasi dan barang yang dibawa.
+  </small>
 
-  `;
+  <div
+    id="buyerKelilingProducts"
+    style="margin-top:15px"
+  >
+    <p>Silakan pilih penjual keliling.</p>
+  </div>
+
+`;
 
   panel.insertBefore(
     pilihan,
@@ -2530,7 +2595,7 @@ console.log("DATA PENJUAL:", penjualList);
       function(){
 
         penjualDipilih=this.value;
-
+loadBuyerKelilingProducts(penjualDipilih);
         Object.keys(markers).forEach(id=>{
 
           const tampil=
