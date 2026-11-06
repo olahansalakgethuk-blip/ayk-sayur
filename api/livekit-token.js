@@ -82,8 +82,18 @@ export default async function handler(req, res) {
         .select("id,nama,username,password,aktif")
         .ilike("username", username)
         .maybeSingle();
-      if (error || !data || data.aktif !== true || String(data.password) !== password) {
-        return json(res, 401, { error: "Login Penjual Keliling tidak valid atau nonaktif." });
+      if (error) {
+        console.error("AYK LIVE seller lookup error:", error);
+        return json(res, 500, { error: "Gagal membaca data Penjual Keliling dari database." });
+      }
+      if (!data) {
+        return json(res, 401, { error: "Username Penjual Keliling tidak ditemukan di database LIVE." });
+      }
+      if (data.aktif !== true) {
+        return json(res, 401, { error: "Akun Penjual Keliling terbaca tidak aktif oleh database LIVE." });
+      }
+      if (String(data.password) !== password) {
+        return json(res, 401, { error: "Password LIVE tidak cocok dengan password di database." });
       }
       identity = "penjual-keliling-" + String(data.id).replace(/[^a-zA-Z0-9_-]/g, "-");
       displayName = String(data.nama || "Penjual Keliling").slice(0, 80);
