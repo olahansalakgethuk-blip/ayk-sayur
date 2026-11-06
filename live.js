@@ -54,6 +54,13 @@ function aykLiveStage(title) {
 async function aykLiveConnect(data, publish) {
   if (!window.LivekitClient) throw new Error("Komponen video belum termuat. Muat ulang aplikasi.");
   const room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
+  room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+    try {
+      const msg = JSON.parse(new TextDecoder().decode(payload));
+      if (msg.type !== "ayk-chat" || typeof msg.text !== "string") return;
+      aykLiveAppendChat(msg.text, participant?.name || "Peserta");
+    } catch (e) { console.warn("Pesan LIVE tidak terbaca", e); }
+  });
   room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
     const el = track.attach();
     if (track.kind === "audio") {
@@ -85,6 +92,7 @@ async function aykLiveConnect(data, publish) {
   aykLiveRoom = room;
   const status = document.getElementById("aykLiveStatus");
   if (status) status.textContent = publish ? "Anda sedang LIVE." : "Terhubung ke siaran langsung.";
+  aykLiveChatPanel(publish);
 }
 
 async function aykLiveStart() {
@@ -186,10 +194,11 @@ async function aykBuyerWatchLive(identity, name) {
     stage.scrollIntoView({ behavior: "smooth", block: "start" });
     await aykLiveConnect(data, false);
     if (aykLiveRoom) {
+      aykLiveChatPanel(false);
       const controls = document.createElement("div");
       controls.className = "panel";
       controls.id = "aykBuyerTalkControls";
-      controls.innerHTML = '<h3>🎙️ Komunikasi dengan Penjual</h3><p id="aykBuyerMicStatus">Mikrofon mati. Tekan tombol untuk mulai berbicara.</p><button class="btn green full" id="aykBuyerMicButton" onclick="aykBuyerToggleMic()">🎤 Angkat Bicara</button><small>Izinkan akses mikrofon saat diminta. Gunakan headset agar suara tidak bergema.</small>';
+      controls.innerHTML = '<h3>🎙️ Komunikasi dengan Penjual</h3><p id="aykBuyerMicStatus">Mikrofon mati. Tekan tombol untuk mulai berbicara.</p><button class="btn green full" id="aykBuyerMicButton" onclick="aykBuyerToggleMic()">🎤 Angkat Bicara</button><small>Gunakan headset agar suara tidak bergema.</small>';
       stage.appendChild(controls);
     }
   } catch (error) {
@@ -221,4 +230,43 @@ async function aykBuyerToggleMic() {
   } catch (error) {
     alert("Mikrofon pembeli: " + (error.message || error));
   }
+}
+
+function aykLiveChatPanel(isSeller) {
+  const stage = document.getElementById("aykLiveStage");
+  if (!stage || document.getElementById("aykLiveChat")) return;
+  const panel = document.createElement("div");
+  panel.className = "panel";
+  panel.id = "aykLiveChat";
+  panel.innerHTML = '<h3>💬 Chat LIVE</h3><div id="aykLiveChatMessages" style="height:180px;overflow:auto;background:#f4f6f4;border-radius:8px;padding:10px;margin-bottom:10px"><small>Belum ada pesan. Mulai percakapan!</small></div><div style="display:flex;gap:8px"><input id="aykLiveChatInput" type="text" maxlength="500" placeholder="Tulis pesan atau pertanyaan..." style="flex:1;min-width:0"><button class="btn green" onclick="aykLiveSendChat()">Kirim</button></div>';
+  stage.appendChild(panel);
+  const input = panel.querySelector("#aykLiveChatInput");
+  input.addEventListener("keydown", e => { if (e.key === "Enter") aykLiveSendChat(); });
+}
+function aykLiveAppendChat(message, sender) {
+  const box = document.getElementById("aykLiveChatMessages");
+  if (!box) return;
+  const empty = box.querySelector("small");
+  if (empty && empty.textContent.startsWith("Belum ada pesan")) box.innerHTML = "";
+  const line = document.createElement("p");
+  line.style.cssText = "margin:6px 0;padding:7px;background:white;border-radius:7px;overflow-wrap:anywhere";
+  const who = document.createElement("b");
+  who.textContent = sender + ": ";
+  const body = document.createTextNode(message);
+  line.append(who, body);
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+async function aykLiveSendChat() {
+  try {
+    if (!aykLiveRoom) throw new Error("Belum terhubung ke siaran LIVE.");
+    const input = document.getElementById("aykLiveChatInput");
+    const message = String(input?.value || "").trim().slice(0,500);
+    if (!message) return;
+    const name = aykLiveRoom.localParticipant.name || (typeof currentKelilingSellerName !== "undefined" ? currentKelilingSellerName : "Peserta");
+    const packet = new TextEncoder().encode(JSON.stringify({type:"ayk-chat",text:message}));
+    await aykLiveRoom.localParticipant.publishData(packet, { reliable:true });
+    aykLiveAppendChat(message, name || "Anda");
+    input.value = "";
+  } catch (error) { alert("Chat LIVE: " + (error.message || error)); }
 }
