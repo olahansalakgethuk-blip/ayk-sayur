@@ -1,0 +1,12 @@
+{
+  "name": "ayk-sayur",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "livekit-server-sdk": "^2.13.3"
+  }
+}
