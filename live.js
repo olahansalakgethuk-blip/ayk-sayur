@@ -1,6 +1,7 @@
 /* AYK SAYUR LIVE client */
 let aykLiveRoom = null;
 let aykLiveTracks = [];
+let aykBuyerMicTrack = null;
 
 async function aykLiveApi(payload) {
   let response;
@@ -53,11 +54,17 @@ function aykLiveStage(title) {
 async function aykLiveConnect(data, publish) {
   if (!window.LivekitClient) throw new Error("Komponen video belum termuat. Muat ulang aplikasi.");
   const room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
-  room.on(LivekitClient.RoomEvent.TrackSubscribed, track => {
+  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
     const el = track.attach();
-    el.style.width = "100%";
-    el.style.maxHeight = "65vh";
-    document.getElementById("aykLiveVideo")?.appendChild(el);
+    if (track.kind === "audio") {
+      el.autoplay = true;
+      el.style.display = "none";
+      document.body.appendChild(el);
+    } else {
+      el.style.width = "100%";
+      el.style.maxHeight = "65vh";
+      document.getElementById("aykLiveVideo")?.appendChild(el);
+    }
   });
   await room.connect(data.url, data.token);
   if (publish) {
@@ -178,7 +185,40 @@ async function aykBuyerWatchLive(identity, name) {
     const stage = aykLiveStage("🔴 LIVE " + name);
     stage.scrollIntoView({ behavior: "smooth", block: "start" });
     await aykLiveConnect(data, false);
+    if (aykLiveRoom) {
+      const controls = document.createElement("div");
+      controls.className = "panel";
+      controls.id = "aykBuyerTalkControls";
+      controls.innerHTML = '<h3>🎙️ Komunikasi dengan Penjual</h3><p id="aykBuyerMicStatus">Mikrofon mati. Tekan tombol untuk mulai berbicara.</p><button class="btn green full" id="aykBuyerMicButton" onclick="aykBuyerToggleMic()">🎤 Angkat Bicara</button><small>Izinkan akses mikrofon saat diminta. Gunakan headset agar suara tidak bergema.</small>';
+      stage.appendChild(controls);
+    }
   } catch (error) {
     alert(error.message);
+  }
+}
+
+async function aykBuyerToggleMic() {
+  try {
+    if (!aykLiveRoom) throw new Error("Hubungkan ke siaran LIVE terlebih dahulu.");
+    const button = document.getElementById("aykBuyerMicButton");
+    const status = document.getElementById("aykBuyerMicStatus");
+    if (aykBuyerMicTrack) {
+      if (aykBuyerMicTrack.isMuted) {
+        await aykBuyerMicTrack.unmute();
+        if (button) button.textContent = "🔇 Matikan Mikrofon";
+        if (status) status.textContent = "Mikrofon aktif. Penjual dapat mendengar Anda.";
+      } else {
+        await aykBuyerMicTrack.mute();
+        if (button) button.textContent = "🎤 Angkat Bicara";
+        if (status) status.textContent = "Mikrofon mati.";
+      }
+      return;
+    }
+    aykBuyerMicTrack = await LivekitClient.createLocalAudioTrack();
+    await aykLiveRoom.localParticipant.publishTrack(aykBuyerMicTrack);
+    if (button) button.textContent = "🔇 Matikan Mikrofon";
+    if (status) status.textContent = "Mikrofon aktif. Penjual dapat mendengar Anda.";
+  } catch (error) {
+    alert("Mikrofon pembeli: " + (error.message || error));
   }
 }
