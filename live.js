@@ -3,16 +3,40 @@ let aykLiveRoom = null;
 let aykLiveTracks = [];
 
 async function aykLiveApi(payload) {
-  const response = await fetch("/api/livekit-token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Server LIVE tidak merespons.");
+  let response;
+
+  try {
+    response = await fetch("/api/livekit-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    throw new Error("Tidak dapat terhubung ke server Vercel: " + error.message);
+  }
+
+  const text = await response.text();
+  let data = {};
+
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      "Server mengirim jawaban bukan JSON. HTTP " + response.status +
+      ". Jawaban: " + text.slice(0, 250)
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data.detail ||
+      data.error ||
+      "Server gagal. HTTP " + response.status
+    );
+  }
+
   return data;
 }
-
 function aykLiveStage(title) {
   let stage = document.getElementById("aykLiveStage");
   if (!stage) {
