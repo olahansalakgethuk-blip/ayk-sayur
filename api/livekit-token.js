@@ -25,12 +25,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { role, password, username, branchId } = req.body || {};
+    const { action, role, password, username, branchId, identity: requestedIdentity } = req.body || {};
     if (typeof password !== "string" || !password || password.length > 256) {
       return json(res, 400, { error: "Data login tidak lengkap." });
     }
 
     const db = supabase();
+    if (action === "list") {
+      const { data, error } = await db.from("live_streams").select("identity,nama,role,room,started_at").eq("aktif", true).order("started_at", { ascending: false });
+      if (error) throw error;
+      return json(res, 200, { streams: data || [] });
+    }
+    if (action === "join") {
+      const { data, error } = await db.from("live_streams").select("identity,nama,room").eq("identity", String(requestedIdentity || "")).eq("aktif", true).maybeSingle();
+      if (error || !data) return json(res, 404, { error: "Siaran sudah berakhir atau tidak ditemukan." });
+      const viewer = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, { identity: "viewer-" + Date.now(), name: "Pembeli", ttl: "2h" });
+      viewer.addGrant({ roomJoin: true, room: data.room, canPublish: false, canSubscribe: true });
+      return json(res, 200, { token: await viewer.toJwt(), url: process.env.LIVEKIT_URL, room: data.room, name: data.nama });
+    }
     let identity = "";
     let displayName = "";
     let room = "";
@@ -80,6 +92,17 @@ export default async function handler(req, res) {
     } else {
       return json(res, 400, { error: "Jenis akun tidak diizinkan untuk LIVE." });
     }
+
+    if (action === "stop") {
+      const { error } = await db.from("live_streams").update({ aktif: false }).eq("identity", identity);
+      if (error) throw error;
+      return json(res, 200, { ok: true });
+    }
+    if (action !== "start") return json(res, 400, { error: "Perintah LIVE tidak dikenal." });
+    const { error: saveError } = await db.from("live_streams").upsert({
+      identity, nama: displayName, role, room, aktif: true, started_at: new Date().toISOString()
+    }, { onConflict: "identity" });
+    if (saveError) throw saveError;
 
     const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
       identity,
