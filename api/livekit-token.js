@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       const { data, error } = await db.from("live_streams").select("identity,nama,room").eq("identity", String(requestedIdentity || "")).eq("aktif", true).maybeSingle();
       if (error || !data) return json(res, 404, { error: "Siaran sudah berakhir atau tidak ditemukan." });
       const viewer = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, { identity: "viewer-" + Date.now(), name: "Pembeli", ttl: "2h" });
-      viewer.addGrant({ roomJoin: true, room: data.room, canPublish: false, canSubscribe: true });
+      viewer.addGrant({ roomJoin: true, room: data.room, canPublish: true, canPublishSources: ["microphone"], canSubscribe: true });
       return json(res, 200, { token: await viewer.toJwt(), url: process.env.LIVEKIT_URL, room: data.room, name: data.nama });
     }
     if (typeof password !== "string" || !password || password.length > 256) {
