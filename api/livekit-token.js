@@ -134,3 +134,4 @@ export default async function handler(req, res) {
     detail: error?.message || String(error)
   });
 }
+}
