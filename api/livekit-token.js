@@ -117,8 +117,10 @@ export default async function handler(req, res) {
       identity,
       name: displayName
     });
-  } catch (error) {
-    console.error("AYK LIVE token error:", error);
-    return json(res, 500, { error: "Server gagal menyiapkan LIVE." });
-  }
+ } catch (error) {
+  console.error("AYK LIVE token error:", error);
+  return json(res, 500, {
+    error: "Server gagal menyiapkan LIVE.",
+    detail: error?.message || String(error)
+  });
 }
