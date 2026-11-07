@@ -554,11 +554,19 @@ function renderBuyerKelilingCart(){
   const total=items.reduce((a,x)=>a+x.qty*x.price,0);
   box.innerHTML=items.map(x=>`<div class="row" style="justify-content:space-between;align-items:center;margin:8px 0">
     <span>${x.emoji} ${x.name}<br><small>${rp(x.price)} × ${x.qty}</small></span>
-    <span><button class="btn light" onclick="changeBuyerKelilingCart('${x.id}',-1)">−</button>
-    <b>${x.qty}</b><button class="btn light" onclick="changeBuyerKelilingCart('${x.id}',1)">+</button></span>
+    <span><button type="button" class="btn light" onclick="changeBuyerKelilingCart('${x.id}',-1)">−</button>
+    <b>${x.qty}</b><button type="button" class="btn light" onclick="changeBuyerKelilingCart('${x.id}',1)">+</button></span>
   </div>`).join("")+`<hr><b>Total: ${rp(total)}</b>
-  <button type="button" class="btn green full" style="margin-top:10px;position:relative;z-index:5;pointer-events:auto" onclick="checkoutBuyerKelilingCart()">Lanjut Pesan</button>
-  <button class="btn light full" style="margin-top:6px" onclick="buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName='';renderBuyerKelilingCart()">Kosongkan Keranjang</button>`;
+  <button type="button" id="buyerKelilingContinueBtn" class="btn green full" style="margin-top:10px">Lanjut Pesan</button>
+  <button type="button" class="btn light full" style="margin-top:6px" onclick="buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName='';renderBuyerKelilingCart()">Kosongkan Keranjang</button>`;
+  const continueBtn=document.getElementById("buyerKelilingContinueBtn");
+  if(continueBtn){
+    continueBtn.addEventListener("click",function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      checkoutBuyerKelilingCart();
+    });
+  }
 }
 function checkoutBuyerKelilingCart(){
   if(!Object.keys(buyerKelilingCart).length)return toast("Keranjang masih kosong");
