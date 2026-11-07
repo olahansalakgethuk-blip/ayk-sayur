@@ -57,6 +57,9 @@ let currentCourierName="";
   
 let currentKelilingSellerId=null;
 let currentKelilingSellerName="";
+let buyerKelilingCart={};
+let buyerKelilingCartSellerId=null;
+let buyerKelilingCartSellerName="";
   
 let branchCoords=JSON.parse(localStorage.getItem("aykBranchCoords")||"null")||{"pusat":{lat:-7.597361,lon:110.364056}};
 if(!branchCoords.pusat)branchCoords.pusat={lat:-7.597361,lon:110.364056};
@@ -226,7 +229,8 @@ async function syncOrder(o){
     bukti_pembayaran:o.proof||"",
     items:o.items,
     cabang_id:o.branchId||"pusat",
-    cabang_nama:o.branchName||branchName(o.branchId||"pusat")
+    cabang_nama:o.branchName||branchName(o.branchId||"pusat"),
+    penjual_keliling_id:o.penjualKelilingId||null
   });
 
   if(error)throw error;
@@ -522,6 +526,104 @@ function showHomeMenu(){
 </div>
 `;
 }
+function addBuyerKelilingCart(productId,stock,price,sellerId,sellerName,productName,unit,emoji){
+  if(buyerKelilingCartSellerId && String(buyerKelilingCartSellerId)!==String(sellerId)){
+    return toast("Selesaikan atau kosongkan keranjang penjual sebelumnya");
+  }
+  buyerKelilingCartSellerId=String(sellerId);
+  buyerKelilingCartSellerName=sellerName||"Penjual Keliling";
+  const key=String(productId),old=buyerKelilingCart[key]?.qty||0;
+  if(old+1>Number(stock))return toast("Stok penjual tidak mencukupi");
+  buyerKelilingCart[key]={id:productId,name:productName,qty:old+1,stock:Number(stock),price:Number(price),unit:unit||"unit",emoji:emoji||"🥬"};
+  renderBuyerKelilingCart();
+  toast(productName+" masuk keranjang");
+}
+function changeBuyerKelilingCart(productId,delta){
+  const key=String(productId),item=buyerKelilingCart[key];
+  if(!item)return;
+  item.qty+=delta;
+  if(item.qty<=0)delete buyerKelilingCart[key];
+  if(!Object.keys(buyerKelilingCart).length){buyerKelilingCartSellerId=null;buyerKelilingCartSellerName="";}
+  renderBuyerKelilingCart();
+}
+function renderBuyerKelilingCart(){
+  const box=document.getElementById("buyerKelilingCart");
+  if(!box)return;
+  const items=Object.values(buyerKelilingCart);
+  if(!items.length){box.innerHTML="Belum ada barang dipilih.";return;}
+  const total=items.reduce((a,x)=>a+x.qty*x.price,0);
+  box.innerHTML=items.map(x=>`<div class="row" style="justify-content:space-between;align-items:center;margin:8px 0">
+    <span>${x.emoji} ${x.name}<br><small>${rp(x.price)} × ${x.qty}</small></span>
+    <span><button class="btn light" onclick="changeBuyerKelilingCart('${x.id}',-1)">−</button>
+    <b>${x.qty}</b><button class="btn light" onclick="changeBuyerKelilingCart('${x.id}',1)">+</button></span>
+  </div>`).join("")+`<hr><b>Total: ${rp(total)}</b>
+  <button class="btn green full" style="margin-top:10px" onclick="checkoutBuyerKelilingCart()">Lanjut Pesan</button>
+  <button class="btn light full" style="margin-top:6px" onclick="buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName='';renderBuyerKelilingCart()">Kosongkan Keranjang</button>`;
+}
+function checkoutBuyerKelilingCart(){
+  if(!Object.keys(buyerKelilingCart).length)return toast("Keranjang masih kosong");
+  if(document.getElementById("buyerKelilingCheckout"))document.getElementById("buyerKelilingCheckout").remove();
+  document.body.insertAdjacentHTML("beforeend",`
+  <div class="modal-bg" id="buyerKelilingCheckout"><div class="modal">
+    <button class="close" onclick="document.getElementById('buyerKelilingCheckout').remove()">×</button>
+    <h2>🛺 Pesan dari ${buyerKelilingCartSellerName}</h2>
+    <div id="buyerKelilingCheckoutItems"></div>
+    <input id="bkcName" class="input" placeholder="Nama pembeli">
+    <input id="bkcPhone" class="input" placeholder="Nomor WhatsApp">
+    <textarea id="bkcAddress" class="input" rows="3" placeholder="Alamat / lokasi bertemu penjual"></textarea>
+    <p><small>Pesanan akan langsung masuk ke akun penjual keliling yang dipilih. Pembayaran dan pengantaran diatur langsung dengan penjual.</small></p>
+    <button class="btn green full" onclick="finishBuyerKelilingOrder()">Kirim Pesanan</button>
+  </div></div>`);
+  const el=document.getElementById("buyerKelilingCheckoutItems");
+  el.innerHTML=Object.values(buyerKelilingCart).map(x=>`<p>${x.name} × ${x.qty} — ${rp(x.price*x.qty)}</p>`).join("")+`<b>Total: ${rp(Object.values(buyerKelilingCart).reduce((a,x)=>a+x.qty*x.price,0))}</b>`;
+}
+async function finishBuyerKelilingOrder(){
+  const name=document.getElementById("bkcName")?.value.trim(),phone=document.getElementById("bkcPhone")?.value.trim(),address=document.getElementById("bkcAddress")?.value.trim();
+  if(!name||!phone||!address)return toast("Lengkapi nama, WhatsApp, dan alamat");
+  if(!sbReady)return toast("Koneksi database belum tersedia. Pesanan belum dikirim.");
+  const sellerId=buyerKelilingCartSellerId,items=Object.values(buyerKelilingCart);
+  if(!sellerId||!items.length)return toast("Pilih penjual dan barang terlebih dahulu");
+  try{
+    const checks=[];
+    for(const item of items){
+      const {data,error}=await sb.from("stok_penjual_keliling").select("stok,harga_jual").eq("penjual_id",sellerId).eq("produk_id",item.id).maybeSingle();
+      if(error)throw error;
+      if(!data||Number(data.stok)<item.qty)throw new Error("Stok "+item.name+" sudah berubah. Silakan muat ulang daftar barang.");
+      checks.push({item,data});
+    }
+    const subtotal=items.reduce((a,x)=>a+x.qty*x.price,0),orderId="AYK-KL-"+Date.now().toString().slice(-8);
+    const orderItems=items.map(x=>({id:x.id,name:x.name,qty:x.qty,price:x.price,cost:0,type:"keliling"}));
+    const {error:insertError}=await sb.from("pesanan").insert({
+      id:orderId,nama_pelanggan:name,whatsapp:phone,alamat:address,latitude:null,longitude:null,
+      subtotal,ongkir:0,zona:"penjual_keliling",total:subtotal,profit:0,metode_pembayaran:"Atur dengan penjual",
+      status:"Menunggu diproses",status_kurir:"menunggu_kurir",kurir_id:null,kurir_nama:"",
+      bukti_pembayaran:"",items:orderItems,cabang_id:"pusat",cabang_nama:"AYK SAYUR",penjual_keliling_id:sellerId
+    });
+    if(insertError)throw insertError;
+    for(const row of checks){
+      const {error}=await sb.from("stok_penjual_keliling").update({stok:Number(row.data.stok)-row.item.qty}).eq("penjual_id",sellerId).eq("produk_id",row.item.id);
+      if(error)console.error("Stok perlu diperiksa manual:",error);
+    }
+    buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName="";
+    document.getElementById("buyerKelilingCheckout")?.remove();renderBuyerKelilingCart();
+    toast("Pesanan berhasil dikirim ke penjual");
+  }catch(e){console.error(e);toast("Pesanan gagal: "+e.message);}
+}
+async function kelilingIncomingOrders(){
+  document.getElementById("app").innerHTML=`<header><h1>📥 Pesanan Masuk</h1><p>${currentKelilingSellerName||"Penjual Keliling"}</p></header>
+  <div class="page"><button class="btn light full" onclick="kelilingApp()">← Kembali</button><div id="kelilingIncomingList"><p>Memuat pesanan...</p></div></div>`;
+  try{
+    const {data,error}=await sb.from("pesanan").select("*").eq("penjual_keliling_id",currentKelilingSellerId).order("created_at",{ascending:false});
+    if(error)throw error;
+    const box=document.getElementById("kelilingIncomingList");if(!box)return;
+    box.innerHTML=(data||[]).length?(data||[]).map(o=>`<div class="panel">
+      <b>Pesanan #${o.id}</b><p>${o.nama_pelanggan||"-"} · WA: ${o.whatsapp||"-"}</p>
+      <p>📍 ${o.alamat||"-"}</p><p>Status: <b>${o.status||"Menunggu diproses"}</b></p>
+      ${(o.items||[]).map(x=>`<div>${x.name||x.nama||"Barang"} × ${x.qty||x.jumlah||0} — ${rp(Number(x.price||0)*Number(x.qty||x.jumlah||0))}</div>`).join("")}
+      <hr><b>Total: ${rp(Number(o.total||0))}</b>
+    </div>`).join(""):"<div class='panel'>Belum ada pesanan masuk.</div>";
+  }catch(e){const box=document.getElementById("kelilingIncomingList");if(box)box.innerHTML="Gagal memuat pesanan: "+e.message;}
+}
 function kelilingApp(){
 
   document.getElementById("app").innerHTML=`
@@ -558,6 +660,8 @@ function kelilingApp(){
         </p>
 
       </div>
+
+      <div class="role-card" onclick="kelilingIncomingOrders()"><div class="role-icon">📥</div><b>PESANAN MASUK</b><small>Lihat pesanan dari pembeli aplikasi</small></div>
 
       <div class="role-card" onclick="kelilingStock()">
 
@@ -2292,61 +2396,29 @@ console.log("DATA PENJUAL:", penjualList);
   }
 
 async function loadBuyerKelilingProducts(penjualId){
-
   const box=document.getElementById("buyerKelilingProducts");
   if(!box)return;
-
-  if(!penjualId || penjualId==="semua"){
-    box.innerHTML="<p>Silakan pilih satu penjual keliling.</p>";
-    return;
-  }
-
+  if(!penjualId||penjualId==="semua"){box.innerHTML="<p>Silakan pilih satu penjual keliling.</p>";return;}
   box.innerHTML="<p>⏳ Memuat barang yang dibawa penjual...</p>";
-
   try{
-
-    const {data,error}=await sb
-      .from("stok_penjual_keliling")
-      .select("produk_id,stok,harga_jual")
-      .eq("penjual_id",penjualId)
-      .gt("stok",0);
-
+    const seller=penjualList.find(x=>String(x.id)===String(penjualId));
+    const sellerName=seller?.nama||"Penjual Keliling";
+    const {data,error}=await sb.from("stok_penjual_keliling").select("produk_id,stok,harga_jual").eq("penjual_id",penjualId).gt("stok",0);
     if(error)throw error;
-
     const stok=data||[];
-
-    if(!stok.length){
-      box.innerHTML="<p>Penjual belum memiliki stok barang.</p>";
-      return;
-    }
-
-    const daftar=stok.map(s=>{
-      const p=products.find(
-        x=>String(x.id)===String(s.produk_id)
-      );
-
+    if(!stok.length){box.innerHTML="<p>Penjual belum memiliki stok barang.</p>";return;}
+    box.innerHTML=stok.map(row=>{
+      const p=products.find(x=>String(x.id)===String(row.produk_id));
       if(!p)return "";
-
-      return `
-        <div class="panel" style="margin-bottom:10px">
-          <b>${p.emoji||"🥬"} ${p.name}</b>
-          <p>Stok: ${s.stok} ${p.unit||"unit"}</p>
-          <b>${rp(Number(s.harga_jual||p.price||0))}</b>
-        </div>
-      `;
-    }).filter(Boolean);
-
-    box.innerHTML=daftar.length
-      ?daftar.join("")
-      :"<p>Data produk tidak ditemukan.</p>";
-
-  }catch(e){
-
-    console.error("Gagal memuat barang:",e);
-    box.innerHTML="<p>Gagal memuat barang: "+e.message+"</p>";
-
-  }
-
+      const price=Number(row.harga_jual||p.price||0);
+      return `<div class="panel" style="margin-bottom:10px">
+        <b>${p.emoji||"🥬"} ${p.name}</b>
+        <p>Stok tersedia: ${row.stok} ${p.unit||"unit"}</p>
+        <b>${rp(price)}</b>
+        <button class="btn green full" style="margin-top:8px" onclick="addBuyerKelilingCart('${p.id}',${Number(row.stok)},${price},'${penjualId}','${String(sellerName).replace(/'/g,"&#39;")}','${String(p.name).replace(/'/g,"&#39;")}','${p.unit||"unit"}','${p.emoji||"🥬"}')">+ Masukkan ke Keranjang</button>
+      </div>`;
+    }).filter(Boolean).join("")||"<p>Data produk tidak ditemukan.</p>";
+  }catch(e){console.error("Gagal memuat barang:",e);box.innerHTML="<p>Gagal memuat barang: "+e.message+"</p>";}
 }
 
   async function updateMarkers(){
