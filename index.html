@@ -577,7 +577,7 @@ function checkoutBuyerKelilingCart(){
   const el=document.getElementById("buyerKelilingCheckoutItems");
   el.innerHTML=Object.values(buyerKelilingCart).map(x=>`<p>${x.name} × ${x.qty} — ${rp(x.price*x.qty)}</p>`).join("")+`<b>Total: ${rp(Object.values(buyerKelilingCart).reduce((a,x)=>a+x.qty*x.price,0))}</b>`;
 }
-async function finishBuyerKelilingOrder(){
+async async function finishBuyerKelilingOrder(){
   const name=document.getElementById("bkcName")?.value.trim(),phone=document.getElementById("bkcPhone")?.value.trim(),address=document.getElementById("bkcAddress")?.value.trim();
   if(!name||!phone||!address)return toast("Lengkapi nama, WhatsApp, dan alamat");
   if(!sbReady)return toast("Koneksi database belum tersedia. Pesanan belum dikirim.");
@@ -609,7 +609,7 @@ async function finishBuyerKelilingOrder(){
     toast("Pesanan berhasil dikirim ke penjual");
   }catch(e){console.error(e);toast("Pesanan gagal: "+e.message);}
 }
-async function kelilingIncomingOrders(){
+async async function kelilingIncomingOrders(){
   document.getElementById("app").innerHTML=`<header><h1>📥 Pesanan Masuk</h1><p>${currentKelilingSellerName||"Penjual Keliling"}</p></header>
   <div class="page"><button class="btn light full" onclick="kelilingApp()">← Kembali</button><div id="kelilingIncomingList"><p>Memuat pesanan...</p></div></div>`;
   try{
@@ -2395,7 +2395,7 @@ console.log("DATA PENJUAL:", penjualList);
 
   }
 
-async function loadBuyerKelilingProducts(penjualId){
+async async function loadBuyerKelilingProducts(penjualId){
   const box=document.getElementById("buyerKelilingProducts");
   if(!box)return;
   if(!penjualId||penjualId==="semua"){box.innerHTML="<p>Silakan pilih satu penjual keliling.</p>";return;}
