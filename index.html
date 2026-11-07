@@ -557,7 +557,7 @@ function renderBuyerKelilingCart(){
     <span><button class="btn light" onclick="changeBuyerKelilingCart('${x.id}',-1)">−</button>
     <b>${x.qty}</b><button class="btn light" onclick="changeBuyerKelilingCart('${x.id}',1)">+</button></span>
   </div>`).join("")+`<hr><b>Total: ${rp(total)}</b>
-  <button type="button" class="btn green full" style="margin-top:10px" onclick="event.preventDefault();event.stopPropagation();checkoutBuyerKelilingCart();">Lanjut Pesan</button>
+  <button type="button" class="btn green full" style="margin-top:10px;position:relative;z-index:5;pointer-events:auto" onclick="checkoutBuyerKelilingCart()">Lanjut Pesan</button>
   <button class="btn light full" style="margin-top:6px" onclick="buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName='';renderBuyerKelilingCart()">Kosongkan Keranjang</button>`;
 }
 function checkoutBuyerKelilingCart(){
