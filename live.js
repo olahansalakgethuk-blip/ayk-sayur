@@ -5,11 +5,24 @@ let aykBuyerMicTrack = null;
 
 async function aykLiveApi(payload) {
   let response;
+  const headers = { "Content-Type": "application/json" };
+
+  // Admin Pusat/Cabang memakai sesi Supabase yang sudah aktif.
+  if (payload.role === "admin-pusat" || payload.role === "admin-cabang") {
+    if (typeof sb === "undefined" || !sb?.auth) {
+      throw new Error("Koneksi login Supabase belum tersedia.");
+    }
+    const { data: sessionData, error: sessionError } = await sb.auth.getSession();
+    if (sessionError || !sessionData?.session?.access_token) {
+      throw new Error("Sesi Admin sudah berakhir. Silakan login kembali.");
+    }
+    headers.Authorization = "Bearer " + sessionData.session.access_token;
+  }
 
   try {
     response = await fetch("/api/livekit-token", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload)
     });
   } catch (error) {
@@ -98,9 +111,12 @@ async function aykLiveConnect(data, publish) {
 async function aykLiveStart() {
   try {
     if (role !== "admin" && role !== "keliling") throw new Error("Akun ini tidak memiliki izin LIVE.");
-    const password = prompt("Masukkan password akun untuk mulai LIVE:");
-    if (!password) return;
-    const payload = { action: "start", password };
+    const payload = { action: "start" };
+    if (role === "keliling") {
+      const password = prompt("Masukkan password Penjual Keliling:");
+      if (!password) return;
+      payload.password = password;
+    }
     if (role === "admin") {
       payload.role = adminMode === "pusat" ? "admin-pusat" : "admin-cabang";
       if (adminMode !== "pusat") payload.branchId = String(currentBranchId);
@@ -125,9 +141,12 @@ async function aykLiveStart() {
 async function aykLiveStop() {
   try {
     if (!aykLiveRoom) throw new Error("Tidak ada siaran aktif pada perangkat ini.");
-    const password = prompt("Masukkan password akun untuk mengakhiri LIVE:");
-    if (!password) return;
-    const payload = { action: "stop", password };
+    const payload = { action: "stop" };
+    if (role === "keliling") {
+      const password = prompt("Masukkan password Penjual Keliling:");
+      if (!password) return;
+      payload.password = password;
+    }
     if (role === "admin") {
       payload.role = adminMode === "pusat" ? "admin-pusat" : "admin-cabang";
       if (adminMode !== "pusat") payload.branchId = String(currentBranchId);
