@@ -613,13 +613,16 @@ async function finishBuyerKelilingOrder(){
       if(!data||Number(data.stok)<item.qty)throw new Error("Stok "+item.name+" sudah berubah. Silakan muat ulang daftar barang.");
       checks.push({item,data});
     }
+    const {data:sellerData,error:sellerError}=await sb.from("penjual_keliling").select("cabang_id").eq("id",sellerId).single();
+    if(sellerError)throw sellerError;
+    const sumberCabang=sellerData?.cabang_id||"pusat";
     const subtotal=items.reduce((a,x)=>a+x.qty*x.price,0),orderId="AYK-KL-"+Date.now().toString().slice(-8);
     const orderItems=items.map(x=>({id:x.id,name:x.name,qty:x.qty,price:x.price,cost:0,type:"keliling"}));
     const {error:insertError}=await sb.from("pesanan").insert({
       id:orderId,nama_pelanggan:name,whatsapp:phone,alamat:address,latitude:buyerKelilingLatitude,longitude:buyerKelilingLongitude,
       subtotal,ongkir:0,zona:"penjual_keliling",total:subtotal,profit:0,metode_pembayaran:"Atur dengan penjual",
       status:"Menunggu diproses",status_kurir:"menunggu_kurir",kurir_id:null,kurir_nama:"",
-      bukti_pembayaran:"",items:orderItems,cabang_id:"pusat",cabang_nama:"AYK SAYUR",penjual_keliling_id:sellerId
+      bukti_pembayaran:"",items:orderItems,cabang_id:sumberCabang,cabang_nama:branchName(sumberCabang),penjual_keliling_id:sellerId
     });
     if(insertError)throw insertError;
     for(const row of checks){
@@ -1689,7 +1692,9 @@ jumlah:qty,
 harga:harga,
 total:total,
 keuntungan:(harga-Number(product.cost||0))*qty,
-pembayaran:payment
+pembayaran:payment,
+       cabang_id:kelilingSellers.find(k=>String(k.id)===String(currentKelilingSellerId))?.cabang_id||"pusat",
+       cabang_nama:branchName(kelilingSellers.find(k=>String(k.id)===String(currentKelilingSellerId))?.cabang_id||"pusat")
       });
 
        if(error)throw error;
@@ -1754,6 +1759,7 @@ async function loadCourierOrders(){
     const {data,error}=await sb.from("pesanan")
       .select("*")
       .eq("status_kurir","menunggu_kurir")
+      .is("penjual_keliling_id",null)
       .order("created_at",{ascending:false});
 
     if(error){
@@ -3389,6 +3395,11 @@ Hapus
         <input id="kwilayahKeliling"
                class="input"
                placeholder="Wilayah jual keliling">
+        <label style="display:block;margin:8px 0 4px;font-weight:bold">Asal kulakan penjual</label>
+        <select id="kcabangKeliling" class="input">
+          <option value="pusat">AYK SAYUR Pusat</option>
+          ${branches.filter(b=>String(b.id)!=="pusat").map(b=>`<option value="${b.id}">${b.name}</option>`).join("")}
+        </select>
 
         <button class="btn green full"
                 onclick="addKelilingSeller()">
@@ -3415,6 +3426,7 @@ Hapus
             <small>
               Wilayah: ${k.wilayah||"-"}
             </small><br>
+            <small>Asal kulakan: ${branchName(k.cabang_id||"pusat")}</small><br>
 
             <small>
               Status: ${k.aktif?"Aktif":"Nonaktif"}
@@ -3621,6 +3633,7 @@ async function addKelilingSeller(){
   let username=document.getElementById("kuserKeliling").value.trim();
   let password=document.getElementById("kpassKeliling").value;
   let wilayah=document.getElementById("kwilayahKeliling").value.trim();
+  let cabang_id=document.getElementById("kcabangKeliling")?.value||"pusat";
 
   if(!nama){
     toast("Nama penjual wajib diisi");
@@ -3648,6 +3661,7 @@ async function addKelilingSeller(){
           username:username,
           password:password,
           wilayah:wilayah,
+          cabang_id:cabang_id,
           aktif:true
         })
         .select()
@@ -3666,6 +3680,7 @@ async function addKelilingSeller(){
         username:username,
         password:password,
         wilayah:wilayah,
+        cabang_id:cabang_id,
         aktif:true
       };
 
