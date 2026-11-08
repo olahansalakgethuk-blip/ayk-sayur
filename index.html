@@ -3413,6 +3413,7 @@ Hapus
       <button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button>
       <button class="btn light" onclick="renameBranch('${b.id}')">✏️ Ubah Nama Cabang</button>
       <button class="btn light" onclick="resetBranchPassword('${b.id}')">🔐 Reset Password Admin</button>
+      <button class="btn light" onclick="updateBranchEmail('${b.id}')">✉️ Ubah Email Admin Cabang</button>
       <button class="btn red" onclick="removeBranch('${b.id}')">Nonaktifkan</button></div>`).join("")||"<p>Belum ada cabang.</p>"}
     </div><div id="branchManage"></div>`;
     }else if(which==="courier"){
@@ -3914,6 +3915,27 @@ async function resetBranchPassword(id){
   }catch(e){
     console.error("Reset password gagal:",e);
     toast("Gagal reset password: "+(e.message||e));
+  }
+}
+async function updateBranchEmail(id){
+  const branch=branches.find(b=>String(b.id)===String(id));
+  if(!branch)return toast("Cabang tidak ditemukan");
+  const email=prompt("Masukkan email baru Admin "+branch.name+":");
+  if(email===null)return;
+  const emailBaru=email.trim();
+  if(!emailBaru||!/^\S+@\S+\.\S+$/.test(emailBaru))return toast("Format email tidak valid");
+  if(!confirm("Ubah email login Admin "+branch.name+" menjadi "+emailBaru+"? Admin harus mengonfirmasi melalui email baru."))return;
+  if(!sbReady)return toast("Supabase belum terhubung");
+  try{
+    const {data,error}=await sb.functions.invoke("rapid-task",{
+      body:{action:"update_email",cabang_id:String(id),email:emailBaru}
+    });
+    if(error)throw error;
+    if(!data?.success)throw new Error(data?.error||"Perubahan email gagal");
+    toast("Permintaan perubahan email dikirim. Minta Admin Cabang memeriksa email baru untuk konfirmasi.");
+  }catch(e){
+    console.error("Ubah email Admin Cabang gagal:",e);
+    toast("Gagal mengubah email: "+(e.message||e));
   }
 }
 async function renameBranch(id){
