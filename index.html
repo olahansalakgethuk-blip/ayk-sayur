@@ -3411,6 +3411,7 @@ Hapus
     <div class="panel"><b>Cabang Terdaftar</b>
       ${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br>
       <button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button>
+      <button class="btn light" onclick="renameBranch('${b.id}')">✏️ Ubah Nama Cabang</button>
       <button class="btn light" onclick="resetBranchPassword('${b.id}')">🔐 Reset Password Admin</button>
       <button class="btn red" onclick="removeBranch('${b.id}')">Nonaktifkan</button></div>`).join("")||"<p>Belum ada cabang.</p>"}
     </div><div id="branchManage"></div>`;
@@ -3913,6 +3914,24 @@ async function resetBranchPassword(id){
   }catch(e){
     console.error("Reset password gagal:",e);
     toast("Gagal reset password: "+(e.message||e));
+  }
+}
+async function renameBranch(id){
+  const branch=branches.find(b=>String(b.id)===String(id));
+  if(!branch)return toast('Cabang tidak ditemukan');
+  const nama=prompt('Nama cabang baru:',branch.name);
+  if(nama===null)return;
+  if(!nama.trim())return toast('Nama cabang wajib diisi');
+  if(!sbReady)return toast('Supabase belum terhubung');
+  try{
+    const {error}=await sb.from('cabang').update({nama:nama.trim()}).eq('id',id);
+    if(error)throw error;
+    await loadBranches();
+    adminPage('branches',document.querySelector('.tab.active'));
+    toast('Nama cabang berhasil diubah');
+  }catch(e){
+    console.error('Ubah nama cabang gagal:',e);
+    toast('Gagal mengubah nama: '+(e.message||e));
   }
 }
 async function addBranch(){
