@@ -38,6 +38,13 @@ const SUPABASE_URL = "https://fdsjfadhzcdybktvmmlr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Yub4LlWj72i2V2AfMxTl8A_5tB0AkpI";
 const sbReady = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
 const sb = sbReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+if(sbReady){
+  sb.auth.onAuthStateChange((event)=>{
+    if(event==="PASSWORD_RECOVERY"){
+      showAdminPasswordReset();
+    }
+  });
+}
 const initialProducts=[
 {id:1,name:"Kangkung",price:5000,cost:3000,stock:20,emoji:"🥬",unit:"ikat",package5k:true,packageUnit:"ikat"},
 {id:2,name:"Bayam",price:5000,cost:3000,stock:20,emoji:"🌿",unit:"ikat",package5k:true,packageUnit:"ikat"},
@@ -3141,6 +3148,9 @@ function adminLogin(){
       <button class="btn green full" onclick="checkAdmin()">
         🔓 Masuk Admin
       </button>
+      <button class="btn light full" id="forgotAdminBtn" style="margin-top:8px" onclick="requestAdminPasswordReset()">
+        🔑 Lupa Password Admin Pusat
+      </button>
 
       <button class="btn light full" style="margin-top:8px" onclick="landing()">
         ← Kembali
@@ -3164,6 +3174,40 @@ function adminLogin(){
   }
 }
 
+async function requestAdminPasswordReset(){
+  const type=document.getElementById("adminType")?.value;
+  const email=document.getElementById("adminEmail")?.value.trim();
+  if(type!=="pusat")return toast("Pemulihan password hanya untuk Admin Pusat");
+  if(!email)return toast("Masukkan email Admin Pusat terlebih dahulu");
+  if(!sbReady)return toast("Supabase belum terhubung");
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:"https://ayksayur.vercel.app/"
+  });
+  if(error){console.error(error);return toast("Gagal mengirim email pemulihan: "+error.message);}
+  toast("Email pemulihan terkirim. Buka email terbaru dan ikuti tautannya.");
+}
+function showAdminPasswordReset(){
+  document.getElementById("app").innerHTML=`
+    <header><h1>🥬 AYK SAYUR</h1><p>Buat Password Admin Pusat Baru</p></header>
+    <div class="page login">
+      <h2>🔐 Atur Password Baru</h2>
+      <p>Masukkan password baru untuk akun Admin Pusat.</p>
+      <input id="resetAdminNewPass" class="input" type="password" placeholder="Password baru (minimal 6 karakter)">
+      <input id="resetAdminConfirmPass" class="input" type="password" placeholder="Ulangi password baru">
+      <button class="btn green full" onclick="saveAdminPasswordReset()">Simpan Password Baru</button>
+    </div>`;
+}
+async function saveAdminPasswordReset(){
+  const p=document.getElementById("resetAdminNewPass")?.value||"";
+  const c=document.getElementById("resetAdminConfirmPass")?.value||"";
+  if(p.length<6)return toast("Password minimal 6 karakter");
+  if(p!==c)return toast("Konfirmasi password tidak sama");
+  const {data,error}=await sb.auth.updateUser({password:p});
+  if(error){console.error(error);return toast("Gagal mengubah password: "+error.message);}
+  await sb.auth.signOut();
+  toast("Password berhasil diubah. Silakan login Admin Pusat.");
+  adminLogin();
+}
 function showAdminLoginType(){
   let type=document.getElementById("adminType")?.value;
   let c=document.getElementById("adminLoginExtra");
