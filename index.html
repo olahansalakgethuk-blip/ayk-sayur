@@ -557,7 +557,7 @@ function renderBuyerKelilingCart(){
     <span><button type="button" class="btn light" onclick="changeBuyerKelilingCart('${x.id}',-1)">−</button>
     <b>${x.qty}</b><button type="button" class="btn light" onclick="changeBuyerKelilingCart('${x.id}',1)">+</button></span>
   </div>`).join("")+`<hr><b>Total: ${rp(total)}</b>
-  <button type="button" id="buyerKelilingContinueBtn" class="btn green full" style="margin-top:10px" onclick="try{toast('Fungsi checkout: '+typeof window.checkoutBuyerKelilingCart);window.checkoutBuyerKelilingCart()}catch(e){console.error(e);toast('Checkout error: '+e.message)}">Lanjut Pesan</button>
+  <button type="button" id="buyerKelilingContinueBtn" class="btn green full" style="margin-top:10px" onclick="checkoutBuyerKelilingCart()">Lanjut Pesan</button>
   <button type="button" class="btn light full" style="margin-top:6px" onclick="buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName='';renderBuyerKelilingCart()">Kosongkan Keranjang</button>`;
   // Penanganan klik juga dipasang langsung pada tombol melalui onclick.
   // Listener lama dihapus agar tidak menjalankan checkout dua kali.
@@ -576,6 +576,8 @@ function checkoutBuyerKelilingCart(){
     <p><small>Pesanan akan langsung masuk ke akun penjual keliling yang dipilih. Pembayaran dan pengantaran diatur langsung dengan penjual.</small></p>
     <button class="btn green full" onclick="finishBuyerKelilingOrder()">Kirim Pesanan</button>
   </div></div>`);
+  const checkoutModal=document.getElementById("buyerKelilingCheckout");
+  if(checkoutModal)checkoutModal.style.display="block";
   const el=document.getElementById("buyerKelilingCheckoutItems");
   el.innerHTML=Object.values(buyerKelilingCart).map(x=>`<p>${x.name} × ${x.qty} — ${rp(x.price*x.qty)}</p>`).join("")+`<b>Total: ${rp(Object.values(buyerKelilingCart).reduce((a,x)=>a+x.qty*x.price,0))}</b>`;
 }
