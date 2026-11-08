@@ -60,13 +60,35 @@ function aykLiveStage(title) {
     const page = document.querySelector(".page") || document.getElementById("app");
     page.appendChild(stage);
   }
-  stage.innerHTML = '<h3>' + title + '</h3><div id="aykLiveVideo" style="background:#111;min-height:220px;border-radius:12px;overflow:hidden"></div><p id="aykLiveStatus">Menghubungkan video...</p>';
+  stage.innerHTML = '<h3>' + title + '</h3><div id="aykLiveVideo" style="background:#111;min-height:220px;border-radius:12px;overflow:hidden"></div><div id="aykLiveParticipants" class="panel" style="margin-top:8px;padding:10px"><b>👥 Bergabung (1)</b><div id="aykLiveParticipantNames" style="font-size:13px;margin-top:6px">Memuat peserta...</div></div><p id="aykLiveStatus">Menghubungkan video...</p>';
   return stage;
+}
+
+function aykLiveRenderParticipants(room) {
+  const box = document.getElementById("aykLiveParticipantNames");
+  const heading = document.querySelector("#aykLiveParticipants b");
+  if (!box || !room) return;
+  const people = [];
+  const localName = room.localParticipant?.name || (room.localParticipant?.identity === "admin-pusat" ? "Admin Pusat" : room.localParticipant?.identity || "Anda");
+  people.push({ name: localName, local: true });
+  room.remoteParticipants?.forEach(participant => {
+    people.push({ name: participant.name || participant.identity || "Peserta", local: false });
+  });
+  if (heading) heading.textContent = "👥 Bergabung (" + people.length + ")";
+  box.replaceChildren();
+  people.forEach(person => {
+    const line = document.createElement("div");
+    line.style.cssText = "padding:3px 0";
+    line.textContent = (person.local ? "🟢 " : "👤 ") + person.name + (person.local ? " (Anda)" : "");
+    box.appendChild(line);
+  });
 }
 
 async function aykLiveConnect(data, publish) {
   if (!window.LivekitClient) throw new Error("Komponen video belum termuat. Muat ulang aplikasi.");
   const room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
+  room.on(LivekitClient.RoomEvent.ParticipantConnected, () => aykLiveRenderParticipants(room));
+  room.on(LivekitClient.RoomEvent.ParticipantDisconnected, () => aykLiveRenderParticipants(room));
   room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
     try {
       const msg = JSON.parse(new TextDecoder().decode(payload));
@@ -103,6 +125,7 @@ async function aykLiveConnect(data, publish) {
     }
   }
   aykLiveRoom = room;
+  aykLiveRenderParticipants(room);
   const status = document.getElementById("aykLiveStatus");
   if (status) status.textContent = publish ? "Anda sedang LIVE." : "Terhubung ke siaran langsung.";
   aykLiveChatPanel(publish);
@@ -217,8 +240,10 @@ async function aykBuyerWatchLive(identity, name) {
       const controls = document.createElement("div");
       controls.className = "panel";
       controls.id = "aykBuyerTalkControls";
-      controls.innerHTML = '<h3>🎙️ Komunikasi dengan Penjual</h3><p id="aykBuyerMicStatus">Mikrofon mati. Tekan tombol untuk mulai berbicara.</p><button class="btn green full" id="aykBuyerMicButton" onclick="aykBuyerToggleMic()">🎤 Angkat Bicara</button><small>Gunakan headset agar suara tidak bergema.</small>';
-      stage.appendChild(controls);
+      controls.style.cssText = "margin-top:6px;padding:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap";
+      controls.innerHTML = '<button class="btn green" style="padding:6px 10px;font-size:12px" id="aykBuyerMicButton" onclick="aykBuyerToggleMic()">🎤 Bicara</button><small id="aykBuyerMicStatus">Mikrofon mati · tekan untuk bicara</small>';
+      const chat = document.getElementById("aykLiveChat");
+      stage.insertBefore(controls, chat || null);
     }
   } catch (error) {
     alert(error.message);
@@ -233,11 +258,11 @@ async function aykBuyerToggleMic() {
     if (aykBuyerMicTrack) {
       if (aykBuyerMicTrack.isMuted) {
         await aykBuyerMicTrack.unmute();
-        if (button) button.textContent = "🔇 Matikan Mikrofon";
+        if (button) button.textContent = "🔇 Matikan";
         if (status) status.textContent = "Mikrofon aktif. Penjual dapat mendengar Anda.";
       } else {
         await aykBuyerMicTrack.mute();
-        if (button) button.textContent = "🎤 Angkat Bicara";
+        if (button) button.textContent = "🎤 Bicara";
         if (status) status.textContent = "Mikrofon mati.";
       }
       return;
