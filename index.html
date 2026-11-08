@@ -60,6 +60,8 @@ let currentKelilingSellerName="";
 let buyerKelilingCart={};
 let buyerKelilingCartSellerId=null;
 let buyerKelilingCartSellerName="";
+let buyerKelilingLatitude=null,buyerKelilingLongitude=null;
+
   
 let branchCoords=JSON.parse(localStorage.getItem("aykBranchCoords")||"null")||{"pusat":{lat:-7.597361,lon:110.364056}};
 if(!branchCoords.pusat)branchCoords.pusat={lat:-7.597361,lon:110.364056};
@@ -573,6 +575,8 @@ function checkoutBuyerKelilingCart(){
     <input id="bkcName" class="input" placeholder="Nama pembeli">
     <input id="bkcPhone" class="input" placeholder="Nomor WhatsApp">
     <textarea id="bkcAddress" class="input" rows="3" placeholder="Alamat / lokasi bertemu penjual"></textarea>
+    <button type="button" class="btn light full" onclick="ambilLokasiPembeliKeliling()">📍 Ambil Titik Lokasi Saya</button>
+    <p id="bkcLocationStatus"><small>Titik lokasi diperlukan agar pesanan muncul sebagai titik merah di peta penjual.</small></p>
     <p><small>Pesanan akan langsung masuk ke akun penjual keliling yang dipilih. Pembayaran dan pengantaran diatur langsung dengan penjual.</small></p>
     <button class="btn green full" onclick="finishBuyerKelilingOrder()">Kirim Pesanan</button>
   </div></div>`);
@@ -580,6 +584,19 @@ function checkoutBuyerKelilingCart(){
   if(checkoutModal)checkoutModal.style.display="block";
   const el=document.getElementById("buyerKelilingCheckoutItems");
   el.innerHTML=Object.values(buyerKelilingCart).map(x=>`<p>${x.name} × ${x.qty} — ${rp(x.price*x.qty)}</p>`).join("")+`<b>Total: ${rp(Object.values(buyerKelilingCart).reduce((a,x)=>a+x.qty*x.price,0))}</b>`;
+}
+function ambilLokasiPembeliKeliling(){
+  const status=document.getElementById("bkcLocationStatus");
+  if(!navigator.geolocation){if(status)status.textContent="Browser tidak mendukung GPS.";return;}
+  if(status)status.textContent="Mengambil lokasi... Izinkan akses lokasi pada browser.";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    buyerKelilingLatitude=Number(pos.coords.latitude);
+    buyerKelilingLongitude=Number(pos.coords.longitude);
+    if(status)status.textContent="✅ Titik lokasi berhasil diambil.";
+  },err=>{
+    if(status)status.textContent="Lokasi gagal diambil. Aktifkan GPS dan izinkan lokasi, lalu coba lagi.";
+    console.warn("GPS pembeli:",err);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 }
 async function finishBuyerKelilingOrder(){
   const name=document.getElementById("bkcName")?.value.trim(),phone=document.getElementById("bkcPhone")?.value.trim(),address=document.getElementById("bkcAddress")?.value.trim();
@@ -598,7 +615,7 @@ async function finishBuyerKelilingOrder(){
     const subtotal=items.reduce((a,x)=>a+x.qty*x.price,0),orderId="AYK-KL-"+Date.now().toString().slice(-8);
     const orderItems=items.map(x=>({id:x.id,name:x.name,qty:x.qty,price:x.price,cost:0,type:"keliling"}));
     const {error:insertError}=await sb.from("pesanan").insert({
-      id:orderId,nama_pelanggan:name,whatsapp:phone,alamat:address,latitude:null,longitude:null,
+      id:orderId,nama_pelanggan:name,whatsapp:phone,alamat:address,latitude:buyerKelilingLatitude,longitude:buyerKelilingLongitude,
       subtotal,ongkir:0,zona:"penjual_keliling",total:subtotal,profit:0,metode_pembayaran:"Atur dengan penjual",
       status:"Menunggu diproses",status_kurir:"menunggu_kurir",kurir_id:null,kurir_nama:"",
       bukti_pembayaran:"",items:orderItems,cabang_id:"pusat",cabang_nama:"AYK SAYUR",penjual_keliling_id:sellerId
@@ -608,24 +625,37 @@ async function finishBuyerKelilingOrder(){
       const {error}=await sb.from("stok_penjual_keliling").update({stok:Number(row.data.stok)-row.item.qty}).eq("penjual_id",sellerId).eq("produk_id",row.item.id);
       if(error)console.error("Stok perlu diperiksa manual:",error);
     }
-    buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName="";
+    buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName="";buyerKelilingLatitude=null;buyerKelilingLongitude=null;
     document.getElementById("buyerKelilingCheckout")?.remove();renderBuyerKelilingCart();
     toast("Pesanan berhasil dikirim ke penjual");
   }catch(e){console.error(e);toast("Pesanan gagal: "+e.message);}
 }
 async function kelilingIncomingOrders(){
   document.getElementById("app").innerHTML=`<header><h1>📥 Pesanan Masuk</h1><p>${currentKelilingSellerName||"Penjual Keliling"}</p></header>
-  <div class="page"><button class="btn light full" onclick="kelilingApp()">← Kembali</button><div id="kelilingIncomingList"><p>Memuat pesanan...</p></div></div>`;
+  <div class="page"><button class="btn light full" onclick="kelilingApp()">← Kembali</button>
+  <div class="panel"><h3>🗺️ Peta Lokasi Pesanan</h3><div id="kelilingOrdersMap" style="height:320px;width:100%;border-radius:12px;z-index:1"></div><small>🔴 Titik merah menunjukkan lokasi pembeli.</small></div>
+  <div id="kelilingIncomingList"><p>Memuat pesanan...</p></div></div>`;
   try{
     const {data,error}=await sb.from("pesanan").select("*").eq("penjual_keliling_id",currentKelilingSellerId).order("created_at",{ascending:false});
     if(error)throw error;
-    const box=document.getElementById("kelilingIncomingList");if(!box)return;
-    box.innerHTML=(data||[]).length?(data||[]).map(o=>`<div class="panel">
+    const orders=data||[],box=document.getElementById("kelilingIncomingList");if(!box)return;
+    box.innerHTML=orders.length?orders.map(o=>`<div class="panel">
       <b>Pesanan #${o.id}</b><p>${o.nama_pelanggan||"-"} · WA: ${o.whatsapp||"-"}</p>
       <p>📍 ${o.alamat||"-"}</p><p>Status: <b>${o.status||"Menunggu diproses"}</b></p>
       ${(o.items||[]).map(x=>`<div>${x.name||x.nama||"Barang"} × ${x.qty||x.jumlah||0} — ${rp(Number(x.price||0)*Number(x.qty||x.jumlah||0))}</div>`).join("")}
       <hr><b>Total: ${rp(Number(o.total||0))}</b>
     </div>`).join(""):"<div class='panel'>Belum ada pesanan masuk.</div>";
+    const points=orders.filter(o=>Number.isFinite(Number(o.latitude))&&Number.isFinite(Number(o.longitude))&&o.latitude!==null&&o.longitude!==null);
+    if(typeof L==="undefined"){document.getElementById("kelilingOrdersMap").innerHTML="Peta tidak dapat dimuat." ;return;}
+    const center=points.length?[Number(points[0].latitude),Number(points[0].longitude)]:[-7.8,110.36];
+    const map=L.map("kelilingOrdersMap").setView(center,points.length?14:10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+    const redIcon=L.divIcon({className:"",html:'<div style="width:20px;height:20px;background:#e53935;border:3px solid white;border-radius:50%;box-shadow:0 1px 6px #555"></div>',iconSize:[26,26],iconAnchor:[13,13]});
+    const bounds=[];
+    points.forEach(o=>{const p=[Number(o.latitude),Number(o.longitude)];bounds.push(p);L.marker(p,{icon:redIcon}).addTo(map).bindPopup("<b>🔴 Pesanan #"+o.id+"</b><br>"+(o.nama_pelanggan||"Pembeli")+"<br>"+(o.alamat||""));});
+    if(bounds.length>1)map.fitBounds(bounds,{padding:[25,25]});
+    if(!points.length)document.getElementById("kelilingOrdersMap").insertAdjacentHTML("afterend",'<p style="color:#a33">Belum ada titik lokasi. Pesanan baru harus dikirim setelah pembeli menekan “Ambil Titik Lokasi Saya”.</p>');
+    setTimeout(()=>map.invalidateSize(),250);
   }catch(e){const box=document.getElementById("kelilingIncomingList");if(box)box.innerHTML="Gagal memuat pesanan: "+e.message;}
 }
 function kelilingApp(){
