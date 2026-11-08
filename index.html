@@ -3856,13 +3856,23 @@ async function deleteProductPhoto(id){
     toast("Gagal hapus foto: "+e.message);
   }
 }
-  function renderAdminReport(c){
+  async function renderAdminReport(c){
   const visibleOrders=orders.filter(o=>adminMode==="pusat"||String(o.branchId||"pusat")===String(currentBranchId));
   const logs=JSON.parse(localStorage.getItem("aykStockLogs")||"[]");
-  const sold=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.qty||0),0),0);
-  const omzet=visibleOrders.reduce((n,o)=>n+Number(o.subtotal||o.total||0),0);
-  const modal=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0),0);
-  const untung=visibleOrders.reduce((n,o)=>n+Number(o.profit||0),0);
+  let directSales=[];
+  if(sbReady){
+    try{
+      let q=sb.from("transaksi_penjual_keliling").select("*");
+      if(adminMode!=="pusat")q=q.eq("cabang_id",currentBranchId);
+      const {data,error}=await q.order("created_at",{ascending:false}).limit(1000);
+      if(error)throw error;
+      directSales=data||[];
+    }catch(e){console.error("Gagal memuat transaksi langsung penjual keliling:",e);toast("Transaksi penjual keliling belum masuk laporan: "+e.message);}
+  }
+  const sold=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.qty||0),0),0)+directSales.reduce((n,t)=>n+Number(t.jumlah||0),0);
+  const omzet=visibleOrders.reduce((n,o)=>n+Number(o.subtotal||o.total||0),0)+directSales.reduce((n,t)=>n+Number(t.total||0),0);
+  const modal=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0),0)+directSales.reduce((n,t)=>n+Number(t.total||0)-Number(t.keuntungan||0),0);
+  const untung=visibleOrders.reduce((n,o)=>n+Number(o.profit||0),0)+directSales.reduce((n,t)=>n+Number(t.keuntungan||0),0);
   const branchOrders=visibleOrders;
   c.innerHTML=`
   <h2>📈 Laporan</h2>
@@ -3870,7 +3880,7 @@ async function deleteProductPhoto(id){
     <div class="stat"><small>Total Terjual</small><b>${sold}</b></div>
     <div class="stat"><small>Omzet Barang</small><b>${rp(omzet)}</b></div>
     <div class="stat"><small>Total Modal</small><b>${rp(modal)}</b></div>
-    <div class="stat"><small>Keuntungan</small><b>${rp(untung)}</b></div>
+    <div class="stat"><small>Keuntungan</small><b>${rp(untung)}</b></div><div class="stat"><small>Transaksi Penjual Keliling</small><b>${directSales.length}</b></div>
   </div>
   <div class="panel">
     <b>📋 Pilih Laporan</b>
