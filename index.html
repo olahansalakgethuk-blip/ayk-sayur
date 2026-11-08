@@ -557,16 +557,10 @@ function renderBuyerKelilingCart(){
     <span><button type="button" class="btn light" onclick="changeBuyerKelilingCart('${x.id}',-1)">−</button>
     <b>${x.qty}</b><button type="button" class="btn light" onclick="changeBuyerKelilingCart('${x.id}',1)">+</button></span>
   </div>`).join("")+`<hr><b>Total: ${rp(total)}</b>
-  <button type="button" id="buyerKelilingContinueBtn" class="btn green full" style="margin-top:10px">Lanjut Pesan</button>
+  <button type="button" id="buyerKelilingContinueBtn" class="btn green full" style="margin-top:10px" onclick="checkoutBuyerKelilingCart()">Lanjut Pesan</button>
   <button type="button" class="btn light full" style="margin-top:6px" onclick="buyerKelilingCart={};buyerKelilingCartSellerId=null;buyerKelilingCartSellerName='';renderBuyerKelilingCart()">Kosongkan Keranjang</button>`;
-  const continueBtn=document.getElementById("buyerKelilingContinueBtn");
-  if(continueBtn){
-    continueBtn.addEventListener("click",function(ev){
-      ev.preventDefault();
-      ev.stopPropagation();
-      checkoutBuyerKelilingCart();
-    });
-  }
+  // Penanganan klik juga dipasang langsung pada tombol melalui onclick.
+  // Listener lama dihapus agar tidak menjalankan checkout dua kali.
 }
 function checkoutBuyerKelilingCart(){
   if(!Object.keys(buyerKelilingCart).length)return toast("Keranjang masih kosong");
