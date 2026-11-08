@@ -3926,11 +3926,11 @@ async function deleteProductPhoto(id){
     }catch(e){console.error("Gagal memuat biaya operasional:",e);toast("Biaya operasional belum dapat dimuat: "+e.message);}
   }
   const totalExpenses=expenses.reduce((n,x)=>n+Number(x.jumlah||0),0);
-  const labaBersih=untung-totalExpenses;
   const sold=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.qty||0),0),0)+directSales.reduce((n,t)=>n+Number(t.jumlah||0),0);
   const omzet=visibleOrders.reduce((n,o)=>n+Number(o.subtotal||o.total||0),0)+directSales.reduce((n,t)=>n+Number(t.total||0),0);
   const modal=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0),0)+directSales.reduce((n,t)=>n+Number(t.total||0)-Number(t.keuntungan||0),0);
   const untung=visibleOrders.reduce((n,o)=>n+Number(o.profit||0),0)+directSales.reduce((n,t)=>n+Number(t.keuntungan||0),0);
+  const labaBersih=untung-totalExpenses;
   const branchOrders=visibleOrders;
   c.innerHTML=`
   <h2>📈 Laporan</h2>
