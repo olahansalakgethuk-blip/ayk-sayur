@@ -3958,9 +3958,18 @@ async function deleteProductPhoto(id){
     <div id="stockReport" class="panel">
       <b>📦 Laporan Stok</b>
       <p><small>Ringkasan stok awal, stok masuk, stok keluar, dan stok akhir. Stok awal dihitung dari catatan perubahan stok paling lama; jika belum ada catatan, angka awal mengikuti stok saat ini.</small></p>
-      <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:7px">Produk</th><th>Stok Awal</th><th>Masuk</th><th>Keluar</th><th>Stok Akhir</th></tr></thead><tbody>
-      ${products.map(p=>{const pl=logs.filter(x=>String(x.productId)===String(p.id)&&String(x.branchId||"pusat")===String(currentBranchId)).sort((a,b)=>new Date(a.date||0)-new Date(b.date||0));const add=pl.filter(x=>x.type==="tambah").reduce((n,x)=>n+Number(x.qty||0),0);const sub=pl.filter(x=>x.type==="kurangi").reduce((n,x)=>n+Number(x.qty||0),0);const awal=pl.length&&pl[0].before!=null?Number(pl[0].before):Number(p.stock||0);return `<tr><td style="padding:7px;border-top:1px solid #eee">${p.emoji||"🥦"} ${p.name}</td><td style="text-align:center;border-top:1px solid #eee">${awal}</td><td style="text-align:center;border-top:1px solid #eee">${add}</td><td style="text-align:center;border-top:1px solid #eee">${sub}</td><td style="text-align:center;border-top:1px solid #eee"><b>${p.stock}</b></td></tr>`}).join("")||`<tr><td colspan="5" style="padding:12px;text-align:center">Belum ada produk.</td></tr>`}
+      <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:7px">Produk</th><th>Stok Awal</th><th>Masuk</th><th>Terjual/Keluar</th><th>Busuk</th><th>Hilang</th><th>Stok Akhir</th></tr></thead><tbody>
+      ${products.map(p=>{const pl=logs.filter(x=>String(x.productId)===String(p.id)&&String(x.branchId||"pusat")===String(currentBranchId)).sort((a,b)=>new Date(a.date||0)-new Date(b.date||0));const add=pl.filter(x=>x.type==="tambah").reduce((n,x)=>n+Number(x.qty||0),0);const sub=pl.filter(x=>x.type==="kurangi").reduce((n,x)=>n+Number(x.qty||0),0);const busuk=pl.filter(x=>x.type==="busuk").reduce((n,x)=>n+Number(x.qty||0),0);const hilang=pl.filter(x=>x.type==="hilang").reduce((n,x)=>n+Number(x.qty||0),0);const awal=pl.length&&pl[0].before!=null?Number(pl[0].before):Number(p.stock||0);return `<tr><td style="padding:7px;border-top:1px solid #eee">${p.emoji||"🥦"} ${p.name}</td><td style="text-align:center;border-top:1px solid #eee">${awal}</td><td style="text-align:center;border-top:1px solid #eee">${add}</td><td style="text-align:center;border-top:1px solid #eee">${sub}</td><td style="text-align:center;border-top:1px solid #eee">${busuk}</td><td style="text-align:center;border-top:1px solid #eee">${hilang}</td><td style="text-align:center;border-top:1px solid #eee"><b>${p.stock}</b></td></tr>`}).join("")||`<tr><td colspan="5" style="padding:12px;text-align:center">Belum ada produk.</td></tr>`}
       </tbody></table></div>
+      <div class="panel" style="margin-top:12px;background:#fff8e1">
+        <b>⚠️ Catat Stok Busuk / Hilang</b>
+        <p><small>Jumlah akan mengurangi stok. Barang busuk dihitung sebagai kerugian berdasarkan harga modal; barang hilang dicatat terpisah.</small></p>
+        <label>Produk</label><select id="stockLossProduct" class="input">${products.map(p=>`<option value="${p.id}">${p.name} (stok ${p.stock} ${p.unit||""})</option>`).join("")}</select>
+        <label>Jenis</label><select id="stockLossType" class="input"><option value="busuk">Busuk / rusak</option><option value="hilang">Hilang</option></select>
+        <label>Jumlah</label><input id="stockLossQty" class="input" type="number" min="0.01" step="any" placeholder="Jumlah barang">
+        <label>Keterangan</label><input id="stockLossNote" class="input" placeholder="Contoh: layu, busuk, hilang saat pengiriman">
+        <button class="btn red full" onclick="recordStockLoss()">Simpan Pengurangan Stok</button>
+      </div>
       <button class="btn green full" style="margin-top:8px" onclick="printStockReport()">🖨️ Cetak Laporan Stok</button>
     </div>
     <div id="salesReport" class="panel" style="display:none"><b>🛒 Laporan Penjualan</b><div style="overflow:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:7px">Produk</th><th>Terjual</th><th>Omzet</th><th>Untung</th></tr></thead><tbody>${(()=>{const m={};visibleOrders.forEach(o=>(o.items||[]).forEach(i=>{m[i.name]??={qty:0,omzet:0,profit:0};m[i.name].qty+=Number(i.qty||0);m[i.name].omzet+=Number(i.price||0)*Number(i.qty||0);m[i.name].profit+=(Number(i.price||0)-Number(i.cost||0))*Number(i.qty||0)}));return Object.entries(m).map(([n,v])=>`<tr><td style="padding:7px;border-top:1px solid #eee">${n}</td><td style="text-align:center;border-top:1px solid #eee">${v.qty}</td><td style="text-align:right;border-top:1px solid #eee">${rp(v.omzet)}</td><td style="text-align:right;border-top:1px solid #eee">${rp(v.profit)}</td></tr>`).join("")||`<tr><td colspan="4" style="padding:12px;text-align:center">Belum ada penjualan.</td></tr>`})()}</tbody></table></div><button class="btn green full" style="margin-top:8px" onclick="printSalesReport()">🖨️ Cetak Laporan Penjualan</button></div>
@@ -3990,6 +3999,34 @@ async function saveOperatingExpense(){
     await renderAdminReport(document.getElementById("adminContent"));
     showReportSection("expenseReport");
   }catch(e){console.error(e);toast("Gagal menyimpan biaya: "+e.message);}
+}
+
+async function recordStockLoss(){
+  const id=document.getElementById("stockLossProduct")?.value;
+  const type=document.getElementById("stockLossType")?.value;
+  const qty=Number(document.getElementById("stockLossQty")?.value||0);
+  const note=document.getElementById("stockLossNote")?.value.trim()||"";
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!p)return toast("Pilih produk terlebih dahulu");
+  if(!Number.isFinite(qty)||qty<=0)return toast("Jumlah harus lebih dari 0");
+  if(qty>Number(p.stock||0))return toast("Jumlah melebihi stok yang tersedia");
+  const before=Number(p.stock||0),after=before-qty;
+  const kind=type==="hilang"?"hilang":"busuk";
+  const loss=kind==="busuk"?qty*Number(p.cost||0):0;
+  try{
+    p.stock=after;
+    await syncProductForCurrentBranch(p);
+    const logs=JSON.parse(localStorage.getItem("aykStockLogs")||"[]");
+    logs.push({productId:p.id,productName:p.name,type:kind,qty,before,after,date:new Date().toLocaleString("id-ID"),branchId:currentBranchId||"pusat",cost:Number(p.cost||0),loss,note});
+    localStorage.setItem("aykStockLogs",JSON.stringify(logs));
+    toast(kind==="busuk"?"Stok busuk dicatat. Kerugian: "+rp(loss):"Stok hilang berhasil dicatat");
+    await renderAdminReport(document.getElementById("adminContent"));
+    showReportSection("stockReport");
+  }catch(e){
+    p.stock=before;
+    console.error(e);
+    toast("Gagal mencatat stok: "+e.message);
+  }
 }
 
 function showReportSection(id){document.querySelectorAll('#reportSections > .panel').forEach(x=>{if(x.id)x.style.display=x.id===id?'block':'none'});const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
