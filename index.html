@@ -3917,6 +3917,16 @@ async function deleteProductPhoto(id){
       directSales=data||[];
     }catch(e){console.error("Gagal memuat transaksi langsung penjual keliling:",e);toast("Transaksi penjual keliling belum masuk laporan: "+e.message);}
   }
+  let expenses=[];
+  if(sbReady && adminMode==="pusat"){
+    try{
+      const {data,error}=await sb.from("biaya_operasional").select("*").order("tanggal",{ascending:false}).order("id",{ascending:false}).limit(1000);
+      if(error)throw error;
+      expenses=data||[];
+    }catch(e){console.error("Gagal memuat biaya operasional:",e);toast("Biaya operasional belum dapat dimuat: "+e.message);}
+  }
+  const totalExpenses=expenses.reduce((n,x)=>n+Number(x.jumlah||0),0);
+  const labaBersih=untung-totalExpenses;
   const sold=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.qty||0),0),0)+directSales.reduce((n,t)=>n+Number(t.jumlah||0),0);
   const omzet=visibleOrders.reduce((n,o)=>n+Number(o.subtotal||o.total||0),0)+directSales.reduce((n,t)=>n+Number(t.total||0),0);
   const modal=visibleOrders.reduce((n,o)=>n+(o.items||[]).reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0),0)+directSales.reduce((n,t)=>n+Number(t.total||0)-Number(t.keuntungan||0),0);
@@ -3941,6 +3951,7 @@ async function deleteProductPhoto(id){
       <button class="btn light" onclick="showReportSection('branchReport')">🏪 Cabang</button>
       <button class="btn light" onclick="showReportSection('productReport')">📊 Produk</button>
       <button class="btn light" onclick="showReportSection('profitReport')">💰 Laba/Rugi</button>
+      ${adminMode==="pusat"?`<button class="btn light" onclick="showReportSection('expenseReport')">🧾 Biaya Operasional</button>`:""}
     </div>
   </div>
   <div id="reportSections">
@@ -3958,9 +3969,27 @@ async function deleteProductPhoto(id){
     <div id="shippingReport" class="panel" style="display:none"><b>🚚 Laporan Ongkir</b><p>Total ongkir: <b>${rp(visibleOrders.reduce((n,o)=>n+Number(o.shipping||0),0))}</b></p><button class="btn green full" onclick="printShippingReport()">🖨️ Cetak Laporan Ongkir</button></div>
     <div id="branchReport" class="panel" style="display:none"><b>🏪 Laporan Cabang</b>${adminMode==="pusat"?branches.map(b=>{const n=orders.filter(o=>String(o.branchId||"pusat")===String(b.id)).length;return `<div class="row"><span>${b.name}</span><b>${n} pesanan</b></div>`}).join(""):"<p>Laporan cabang hanya tersedia untuk Admin Pusat.</p>"}<button class="btn green full" onclick="printBranchReport()">🖨️ Cetak Laporan Cabang</button></div>
     <div id="productReport" class="panel" style="display:none"><b>📊 Laporan Produk</b>${products.map(p=>`<div class="row"><span>${p.emoji||"🥦"} ${p.name}</span><b>Stok ${p.stock}</b></div>`).join("")}<button class="btn green full" onclick="printProductReport()">🖨️ Cetak Laporan Produk</button></div>
-    <div id="profitReport" class="panel" style="display:none"><b>💰 Laporan Laba/Rugi Sederhana</b><div class="row"><span>Omzet</span><b>${rp(omzet)}</b></div><div class="row"><span>Modal</span><b>${rp(modal)}</b></div><div class="row"><span>Laba</span><b>${rp(untung)}</b></div><button class="btn green full" onclick="printProfitReport()">🖨️ Cetak Laporan Laba/Rugi</button></div>
+    <div id="profitReport" class="panel" style="display:none"><b>💰 Laporan Laba/Rugi</b><div class="row"><span>Omzet</span><b>${rp(omzet)}</b></div><div class="row"><span>Modal Barang</span><b>${rp(modal)}</b></div><div class="row"><span>Laba Kotor</span><b>${rp(untung)}</b></div><div class="row"><span>Biaya Operasional</span><b>${rp(totalExpenses)}</b></div><div class="row"><strong>Laba Setelah Biaya</strong><strong>${rp(labaBersih)}</strong></div><small>Belum termasuk pembagian komisi dan bagian pengelola cabang.</small><button class="btn green full" onclick="printProfitReport()">🖨️ Cetak Laporan Laba/Rugi</button></div>
+    ${adminMode==="pusat"?`<div id="expenseReport" class="panel" style="display:none"><b>🧾 Biaya Operasional</b><p><small>Hanya Admin Pusat yang dapat mengelola data ini.</small></p><label>Tanggal</label><input id="expenseDate" class="input" type="date" value="${new Date().toLocaleDateString('en-CA')}"><label>Cabang</label><select id="expenseBranch" class="input"><option value="pusat">Pusat</option>${branches.map(b=>`<option value="${b.id}">${b.name}</option>`).join("")}</select><label>Kategori biaya</label><select id="expenseCategory" class="input"><option>Listrik</option><option>Bensin</option><option>Sewa</option><option>Gaji</option><option>Transportasi</option><option>Perlengkapan</option><option>Lain-lain</option></select><label>Keterangan</label><input id="expenseNote" class="input" placeholder="Keterangan pengeluaran"><label>Jumlah (Rp)</label><input id="expenseAmount" class="input" type="number" min="1" placeholder="Jumlah biaya"><button class="btn green full" onclick="saveOperatingExpense()">💾 Simpan Biaya</button><hr><b>Total biaya: ${rp(totalExpenses)}</b>${expenses.map(x=>`<div class="row" style="border-top:1px solid #eee;padding:8px 0"><span><b>${x.kategori}</b><br><small>${x.tanggal} · ${x.cabang_id==="pusat"?"Pusat":branchName(x.cabang_id)}<br>${x.keterangan||""}</small></span><b>${rp(x.jumlah)}</b></div>`).join("")||"<p>Belum ada biaya operasional.</p>"}</div>`:""}
     <div class="panel"><b>📝 Riwayat Perubahan Stok</b>${logs.filter(x=>String(x.branchId||"pusat")===String(currentBranchId)).slice().reverse().slice(0,20).map(x=>`<div class="row"><span>${x.date}<br>${x.productName}</span><b>${x.type==="tambah"?"➕":"➖"}${x.qty}</b></div>`).join("")||"<p>Belum ada perubahan stok.</p>"}<button class="btn green full" onclick="printStockHistoryReport()">🖨️ Cetak Riwayat Stok</button></div>
   </div>`;
+}
+
+async function saveOperatingExpense(){
+  if(adminMode!=="pusat" || !sbReady){toast("Hanya Admin Pusat yang dapat menyimpan biaya");return;}
+  const tanggal=document.getElementById("expenseDate")?.value;
+  const cabang_id=document.getElementById("expenseBranch")?.value||"pusat";
+  const kategori=document.getElementById("expenseCategory")?.value;
+  const keterangan=document.getElementById("expenseNote")?.value.trim()||"";
+  const jumlah=Number(document.getElementById("expenseAmount")?.value||0);
+  if(!tanggal||!kategori||!Number.isFinite(jumlah)||jumlah<=0){toast("Lengkapi tanggal, kategori, dan jumlah biaya");return;}
+  try{
+    const {error}=await sb.from("biaya_operasional").insert([{tanggal,cabang_id,kategori,keterangan,jumlah}]);
+    if(error)throw error;
+    toast("Biaya operasional berhasil disimpan");
+    await renderAdminReport(document.getElementById("adminContent"));
+    showReportSection("expenseReport");
+  }catch(e){console.error(e);toast("Gagal menyimpan biaya: "+e.message);}
 }
 
 function showReportSection(id){document.querySelectorAll('#reportSections > .panel').forEach(x=>{if(x.id)x.style.display=x.id===id?'block':'none'});const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
