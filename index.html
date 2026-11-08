@@ -575,13 +575,14 @@ function checkoutBuyerKelilingCart(){
     <input id="bkcName" class="input" placeholder="Nama pembeli">
     <input id="bkcPhone" class="input" placeholder="Nomor WhatsApp">
     <textarea id="bkcAddress" class="input" rows="3" placeholder="Alamat / lokasi bertemu penjual"></textarea>
-    <button type="button" class="btn light full" onclick="ambilLokasiPembeliKeliling()">📍 Ambil Titik Lokasi Saya</button>
-    <p id="bkcLocationStatus"><small>Titik lokasi diperlukan agar pesanan muncul sebagai titik merah di peta penjual.</small></p>
+    <p id="bkcLocationStatus"><small>📍 Lokasi sedang diambil otomatis untuk menandai pesanan di peta penjual.</small></p>
     <p><small>Pesanan akan langsung masuk ke akun penjual keliling yang dipilih. Pembayaran dan pengantaran diatur langsung dengan penjual.</small></p>
     <button class="btn green full" onclick="finishBuyerKelilingOrder()">Kirim Pesanan</button>
   </div></div>`);
   const checkoutModal=document.getElementById("buyerKelilingCheckout");
   if(checkoutModal)checkoutModal.style.display="block";
+  buyerKelilingLatitude=null;buyerKelilingLongitude=null;
+  ambilLokasiPembeliKeliling();
   const el=document.getElementById("buyerKelilingCheckoutItems");
   el.innerHTML=Object.values(buyerKelilingCart).map(x=>`<p>${x.name} × ${x.qty} — ${rp(x.price*x.qty)}</p>`).join("")+`<b>Total: ${rp(Object.values(buyerKelilingCart).reduce((a,x)=>a+x.qty*x.price,0))}</b>`;
 }
