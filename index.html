@@ -2119,51 +2119,42 @@ async function checkAdmin(){
   let type=document.getElementById("adminType").value;
 
   if(type==="pusat"){
+    const email=document.getElementById("adminEmail")?.value.trim();
+    const pass=document.getElementById("adminPass").value;
+    const pusatUid="3109dc75-7519-4d32-a201-fd9007b4fc90";
 
-    let pass=document.getElementById("adminPass").value;
-    let adminPassword=await getAdminPassword();
+    if(!sbReady)return toast("Supabase belum terhubung");
+    if(!email||!pass)return toast("Email dan password wajib diisi");
 
-    if(pass===adminPassword){
-
-      role="admin";
-      adminMode="pusat";
-      currentBranchId="pusat";
-      adminApp();
-
-    }else{
-
-      toast("Password salah");
-
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){console.error(error);return toast("Login Admin Pusat gagal: "+error.message);}
+    if(data.user?.id!==pusatUid){
+      await sb.auth.signOut();
+      return toast("Akun ini bukan Admin Pusat yang terdaftar");
     }
 
+    role="admin";
+    adminMode="pusat";
+    currentBranchId="pusat";
+    await loadOnlineData();
+    adminApp();
+    return;
+  }
+
+  let id=document.getElementById("loginBranch").value;
+  let pass=document.getElementById("adminPass").value;
+
+  let u=
+    branchAdmins.find(x=>String(x.branchId)===String(id))||
+    JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));
+
+  if(u&&u.password===pass){
+    role="admin";
+    adminMode="cabang";
+    currentBranchId=id;
+    adminApp();
   }else{
-
-    let id=document.getElementById("loginBranch").value;
-    let pass=document.getElementById("adminPass").value;
-
-    let u=
-      branchAdmins.find(
-        x=>String(x.branchId)===String(id)
-      )||
-      JSON.parse(
-        localStorage.getItem("aykBranchAdmins")||"[]"
-      ).find(
-        x=>String(x.branchId)===String(id)
-      );
-
-    if(u&&u.password===pass){
-
-      role="admin";
-      adminMode="cabang";
-      currentBranchId=id;
-      adminApp();
-
-    }else{
-
-      toast("Password cabang salah");
-
-    }
-
+    toast("Password cabang salah");
   }
 }
 async function checkCourier(){
@@ -3135,7 +3126,7 @@ function adminLogin(){
           id="adminPass"
           class="input"
           type="password"
-          placeholder="Masukkan password admin"
+          placeholder="Masukkan password akun Supabase untuk Admin Pusat"
           style="padding-right:50px"
           onkeydown="if(event.key==='Enter')checkAdmin()"
         >
@@ -3194,8 +3185,21 @@ function showAdminLoginType(){
       </select>
     `;
   }else{
-    c.innerHTML="";
+    c.innerHTML=`
+      <label style="display:block;margin-top:12px">Email Admin Pusat</label>
+      <input id="adminEmail" class="input" type="email" autocomplete="username" placeholder="Email akun Admin Pusat">
+    `;
   }
+}
+
+async function logoutAdmin(){
+  if(adminMode==="pusat"&&sbReady){
+    const {error}=await sb.auth.signOut();
+    if(error)console.error("Gagal keluar dari Supabase Auth:",error);
+  }
+  role=null;
+  adminMode="pusat";
+  landing();
 }
 
 function adminApp(){
@@ -3224,7 +3228,7 @@ function adminApp(){
     <div class="page" id="adminContent"></div>
 
     <div class="top">
-      <button class="btn light" onclick="landing()">← Keluar Admin</button>
+      <button class="btn light" onclick="logoutAdmin()">← Keluar Admin</button>
     </div>
   `;
 
