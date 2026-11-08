@@ -4150,7 +4150,7 @@ async function recordStockLoss(){
   }
 }
 
-function showReportSection(id){document.querySelectorAll('#reportSections > .panel').forEach(x=>{if(x.id)x.style.display=x.id===id?'block':'none'});const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function showReportSection(id){document.querySelectorAll('#reportSections > .panel').forEach(x=>{if(x.id)x.style.display=x.id===id?'block':'none'});const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});if(id==='branchReport')loadBranchStockOverview();}
 function reportPrint(title,html){
   const old=document.getElementById('aykPrintArea');
   if(old) old.remove();
