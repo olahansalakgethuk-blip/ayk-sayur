@@ -3411,6 +3411,7 @@ Hapus
     <div class="panel"><b>Cabang Terdaftar</b>
       ${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br>
       <button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button>
+      <button class="btn light" onclick="resetBranchPassword('${b.id}')">🔐 Reset Password Admin</button>
       <button class="btn red" onclick="removeBranch('${b.id}')">Nonaktifkan</button></div>`).join("")||"<p>Belum ada cabang.</p>"}
     </div><div id="branchManage"></div>`;
     }else if(which==="courier"){
@@ -3892,6 +3893,28 @@ async function changeCourierPassword(id){
     toast("Gagal mengganti password: "+e.message);
   }
 }
+async function resetBranchPassword(id){
+  const branch=branches.find(b=>String(b.id)===String(id));
+  if(!branch)return toast("Cabang tidak ditemukan");
+  const password=prompt("Masukkan password baru Admin "+branch.name+" (minimal 8 karakter):");
+  if(password===null)return;
+  if(password.length<8)return toast("Password minimal 8 karakter");
+  const ulang=prompt("Ulangi password baru:");
+  if(ulang===null)return;
+  if(password!==ulang)return toast("Password tidak sama");
+  if(!sbReady)return toast("Supabase belum terhubung");
+  try{
+    const {data,error}=await sb.functions.invoke("rapid-task",{
+      body:{action:"reset_password",cabang_id:String(id),password:password}
+    });
+    if(error)throw error;
+    if(!data?.success)throw new Error(data?.error||"Reset password gagal");
+    toast("Password Admin "+branch.name+" berhasil diubah");
+  }catch(e){
+    console.error("Reset password gagal:",e);
+    toast("Gagal reset password: "+(e.message||e));
+  }
+}
 async function addBranch(){
   const name=document.getElementById("bnm")?.value.trim()||"";
   const address=document.getElementById("bad")?.value.trim()||"";
@@ -3904,7 +3927,7 @@ async function addBranch(){
   if(!sbReady)return toast("Supabase belum terhubung");
   try{
     const {data,error}=await sb.functions.invoke("rapid-task",{
-      body:{nama:name,alamat:address,email,password}
+      body:{action:"create_branch",nama:name,alamat:address,email,password}
     });
     if(error)throw error;
     if(!data?.success)throw new Error(data?.error||"Cabang gagal dibuat");
