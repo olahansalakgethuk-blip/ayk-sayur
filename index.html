@@ -631,6 +631,15 @@ async function finishBuyerKelilingOrder(){
     toast("Pesanan berhasil dikirim ke penjual");
   }catch(e){console.error(e);toast("Pesanan gagal: "+e.message);}
 }
+async function setKelilingOrderStatus(orderId,status){
+  if(!sbReady)return toast("Koneksi database belum tersedia");
+  try{
+    const {error}=await sb.from("pesanan").update({status}).eq("id",orderId).eq("penjual_keliling_id",currentKelilingSellerId);
+    if(error)throw error;
+    toast(status==="Diproses"?"Pesanan mulai diproses":"Pesanan ditandai selesai");
+    await kelilingIncomingOrders();
+  }catch(e){console.error(e);toast("Gagal mengubah status: "+e.message);}
+}
 async function kelilingIncomingOrders(){
   document.getElementById("app").innerHTML=`<header><h1>📥 Pesanan Masuk</h1><p>${currentKelilingSellerName||"Penjual Keliling"}</p></header>
   <div class="page"><button class="btn light full" onclick="kelilingApp()">← Kembali</button>
@@ -645,6 +654,10 @@ async function kelilingIncomingOrders(){
       <p>📍 ${o.alamat||"-"}</p><p>Status: <b>${o.status||"Menunggu diproses"}</b></p>
       ${(o.items||[]).map(x=>`<div>${x.name||x.nama||"Barang"} × ${x.qty||x.jumlah||0} — ${rp(Number(x.price||0)*Number(x.qty||x.jumlah||0))}</div>`).join("")}
       <hr><b>Total: ${rp(Number(o.total||0))}</b>
+      <div style="margin-top:12px">
+      ${(o.status||"Menunggu diproses")==="Menunggu diproses"?`<button class="btn green full" onclick="setKelilingOrderStatus('${String(o.id).replace(/'/g,"\\'")}','Diproses')">✅ PROSES PESANAN</button>`: ""}
+      ${o.status==="Diproses"?`<button class="btn green full" onclick="setKelilingOrderStatus('${String(o.id).replace(/'/g,"\\'")}','Selesai')">🏁 PESANAN SELESAI</button>`:""}
+      </div>
     </div>`).join(""):"<div class='panel'>Belum ada pesanan masuk.</div>";
     const points=orders.filter(o=>Number.isFinite(Number(o.latitude))&&Number.isFinite(Number(o.longitude))&&o.latitude!==null&&o.longitude!==null);
     if(typeof L==="undefined"){document.getElementById("kelilingOrdersMap").innerHTML="Peta tidak dapat dimuat." ;return;}
