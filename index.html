@@ -3411,6 +3411,7 @@ Hapus
     <div class="panel"><b>Cabang Terdaftar</b>
       ${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br>
       <button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button>
+      <button class="btn light" onclick="resetBranchPassword('${b.id}')">🔐 Reset Password Admin</button>
       <button class="btn red" onclick="removeBranch('${b.id}')">Nonaktifkan</button></div>`).join("")||"<p>Belum ada cabang.</p>"}
     </div><div id="branchManage"></div>`;
     }else if(which==="courier"){
@@ -3892,7 +3893,7 @@ async function changeCourierPassword(id){
     toast("Gagal mengganti password: "+e.message);
   }
 }
-async function addBranch(){
+async async function addBranch(){
   const name=document.getElementById("bnm")?.value.trim()||"";
   const address=document.getElementById("bad")?.value.trim()||"";
   const lat=Number(document.getElementById("blat")?.value);
@@ -3904,7 +3905,7 @@ async function addBranch(){
   if(!sbReady)return toast("Supabase belum terhubung");
   try{
     const {data,error}=await sb.functions.invoke("rapid-task",{
-      body:{nama:name,alamat:address,email,password}
+      body:{action:"create_branch",nama:name,alamat:address,email,password}
     });
     if(error)throw error;
     if(!data?.success)throw new Error(data?.error||"Cabang gagal dibuat");
@@ -3917,6 +3918,27 @@ async function addBranch(){
   }catch(e){
     console.error("Gagal membuat cabang:",e);
     toast("Gagal membuat cabang: "+(e.message||e));
+  }
+}
+async function resetBranchPassword(id){
+  const password=prompt("Masukkan password baru Admin "+branchName(id)+" (minimal 8 karakter):");
+  if(password===null)return;
+  if(password.length<8)return toast("Password minimal 8 karakter");
+  const ulang=prompt("Ulangi password baru:");
+  if(ulang===null)return;
+  if(password!==ulang)return toast("Kedua password tidak sama");
+  if(!sbReady)return toast("Supabase belum terhubung");
+  if(!confirm("Atur ulang password Admin "+branchName(id)+"?"))return;
+  try{
+    const {data,error}=await sb.functions.invoke("rapid-task",{
+      body:{action:"reset_password",cabang_id:String(id),password}
+    });
+    if(error)throw error;
+    if(!data?.success)throw new Error(data?.error||"Reset password gagal");
+    toast("Password Admin Cabang berhasil diubah");
+  }catch(e){
+    console.error("Gagal reset password:",e);
+    toast("Gagal reset password: "+(e.message||e));
   }
 }
 async function removeBranch(id){if(!confirm("Hapus cabang ini?"))return;try{if(sbReady){let {error}=await sb.from("cabang").update({aktif:false}).eq("id",id);if(error)throw error;}branches=branches.filter(b=>b.id!==id);saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").filter(x=>x.branchId!==id);localStorage.setItem("aykBranchAdmins",JSON.stringify(a));adminPage("branches",document.querySelectorAll(".tab")[3]);toast("Cabang dihapus")}catch(e){toast("Gagal hapus cabang: "+e.message)}}
