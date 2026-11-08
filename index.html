@@ -2148,21 +2148,42 @@ async function checkAdmin(){
     return;
   }
 
-  let id=document.getElementById("loginBranch").value;
-  let pass=document.getElementById("adminPass").value;
+  const email=document.getElementById("adminEmail")?.value.trim();
+  const pass=document.getElementById("adminPass")?.value||"";
+  if(!sbReady)return toast("Supabase belum terhubung");
+  if(!email||!pass)return toast("Email dan password wajib diisi");
 
-  let u=
-    branchAdmins.find(x=>String(x.branchId)===String(id))||
-    JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").find(x=>String(x.branchId)===String(id));
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){console.error(error);return toast("Login Admin Cabang gagal: "+error.message);}
 
-  if(u&&u.password===pass){
-    role="admin";
-    adminMode="cabang";
-    currentBranchId=id;
-    adminApp();
-  }else{
-    toast("Password cabang salah");
+  const {data:akses,error:aksesError}=await sb
+    .from("admin_cabang_auth")
+    .select("cabang_id,aktif")
+    .eq("user_id",data.user.id)
+    .eq("aktif",true)
+    .maybeSingle();
+
+  if(aksesError||!akses){
+    await sb.auth.signOut();
+    return toast("Akun ini belum terdaftar sebagai Admin Cabang aktif");
   }
+
+  const {data:cabang,error:cabangError}=await sb
+    .from("cabang")
+    .select("id,nama,aktif")
+    .eq("id",akses.cabang_id)
+    .maybeSingle();
+
+  if(cabangError||!cabang||!cabang.aktif){
+    await sb.auth.signOut();
+    return toast("Cabang tidak ditemukan atau sedang nonaktif");
+  }
+
+  role="admin";
+  adminMode="cabang";
+  currentBranchId=String(akses.cabang_id);
+  await loadOnlineData();
+  adminApp();
 }
 async function checkCourier(){
   let id=document.getElementById("courierSelect").value;
@@ -3209,40 +3230,34 @@ async function saveAdminPasswordReset(){
   adminLogin();
 }
 function showAdminLoginType(){
-  let type=document.getElementById("adminType")?.value;
-  let c=document.getElementById("adminLoginExtra");
-
+  const type=document.getElementById("adminType")?.value;
+  const c=document.getElementById("adminLoginExtra");
+  const forgot=document.getElementById("forgotAdminBtn");
   if(!c)return;
 
   if(type==="cabang"){
     c.innerHTML=`
-      <label style="display:block;margin-top:12px">
-        Pilih Cabang
-      </label>
-
-      <select id="loginBranch" class="input">
-        ${branches.map(b=>`
-          <option value="${b.id}">
-            🏪 ${b.name}
-          </option>
-        `).join("")}
-      </select>
+      <label style="display:block;margin-top:12px">Email Admin Cabang</label>
+      <input id="adminEmail" class="input" type="email" autocomplete="username" placeholder="Email akun Admin Cabang">
     `;
+    if(forgot)forgot.style.display="none";
   }else{
     c.innerHTML=`
       <label style="display:block;margin-top:12px">Email Admin Pusat</label>
       <input id="adminEmail" class="input" type="email" autocomplete="username" placeholder="Email akun Admin Pusat">
     `;
+    if(forgot)forgot.style.display="block";
   }
 }
 
 async function logoutAdmin(){
-  if(adminMode==="pusat"&&sbReady){
+  if(sbReady){
     const {error}=await sb.auth.signOut();
     if(error)console.error("Gagal keluar dari Supabase Auth:",error);
   }
   role=null;
   adminMode="pusat";
+  currentBranchId="pusat";
   landing();
 }
 
@@ -3382,7 +3397,22 @@ Hapus
 }).join("")}`;
   }else if(which==="branches"){
     const non=branches.filter(b=>b.id!=="pusat");
-    c.innerHTML=`<h2>🏪 Manajemen Cabang</h2><div class="panel"><b>➕ Tambah Cabang</b><input id="bnm" class="input" placeholder="Nama cabang"><input id="bad" class="input" placeholder="Alamat cabang"><input id="blat" class="input" type="number" step="any" placeholder="Latitude cabang"><input id="blon" class="input" type="number" step="any" placeholder="Longitude cabang"><small>Koordinat dipakai sebagai titik awal ongkir otomatis.</small><input id="bpass" class="input" type="password" placeholder="Password admin cabang (min. 6)"><button class="btn green full" onclick="addBranch()">Tambah Cabang</button></div><div class="panel"><b>Cabang Terdaftar</b>${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br><button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button> <button class="btn light" onclick="changeBranchPassword('${b.id}')">🔐 Password</button> <button class="btn red" onclick="removeBranch('${b.id}')">Hapus</button></div>`).join("")||"<p>Belum ada cabang.</p>"}</div><div id="branchManage"></div>`;
+    c.innerHTML=`<h2>🏪 Manajemen Cabang</h2>
+    <div class="panel"><b>➕ Tambah Cabang & Akun Admin</b>
+      <input id="bnm" class="input" placeholder="Nama cabang">
+      <input id="bad" class="input" placeholder="Alamat cabang">
+      <input id="blat" class="input" type="number" step="any" placeholder="Latitude cabang">
+      <input id="blon" class="input" type="number" step="any" placeholder="Longitude cabang">
+      <small>Koordinat dipakai sebagai titik awal ongkir otomatis.</small>
+      <input id="bemail" class="input" type="email" placeholder="Email login Admin Cabang">
+      <input id="bpass" class="input" type="password" placeholder="Password Admin Cabang (minimal 8 karakter)">
+      <button class="btn green full" onclick="addBranch()">Buat Cabang & Akun</button>
+    </div>
+    <div class="panel"><b>Cabang Terdaftar</b>
+      ${non.map(b=>`<div class="panel"><b>🏪 ${b.name}</b><br><small>${b.address||"-"}</small><br>
+      <button class="btn light" onclick="manageBranch('${b.id}')">⚙️ Harga & Stok Cabang</button>
+      <button class="btn red" onclick="removeBranch('${b.id}')">Nonaktifkan</button></div>`).join("")||"<p>Belum ada cabang.</p>"}
+    </div><div id="branchManage"></div>`;
     }else if(which==="courier"){
     c.innerHTML=`<h2>🚚 Manajemen Kurir</h2>
     <div class="panel">
@@ -3862,7 +3892,33 @@ async function changeCourierPassword(id){
     toast("Gagal mengganti password: "+e.message);
   }
 }
-async function addBranch(){let name=document.getElementById("bnm").value.trim(),address=document.getElementById("bad").value.trim(),lat=Number(document.getElementById("blat").value),lon=Number(document.getElementById("blon").value),pass=document.getElementById("bpass").value;if(!Number.isFinite(lat)||!Number.isFinite(lon))return toast("Latitude dan longitude cabang wajib diisi");if(!name||pass.length<6)return toast("Nama cabang wajib dan password minimal 6 karakter");let id="cabang-"+Date.now();try{if(sbReady){let {error}=await sb.from("cabang").insert({id,nama:name,alamat:address,aktif:true});if(error)throw error; let ar=await sb.from("admin_cabang").insert({cabang_id:id,password:pass});if(ar.error)throw ar.error;}branches.push({id,name,address});branchCoords[id]={lat,lon};localStorage.setItem("aykBranchCoords",JSON.stringify(branchCoords));saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]");a.push({branchId:id,password:pass});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Cabang berhasil dibuat");adminPage("branches",document.querySelectorAll(".tab")[3])}catch(e){toast("Gagal membuat cabang: "+e.message)}}
+async function addBranch(){
+  const name=document.getElementById("bnm")?.value.trim()||"";
+  const address=document.getElementById("bad")?.value.trim()||"";
+  const lat=Number(document.getElementById("blat")?.value);
+  const lon=Number(document.getElementById("blon")?.value);
+  const email=document.getElementById("bemail")?.value.trim()||"";
+  const password=document.getElementById("bpass")?.value||"";
+  if(!name||!email||password.length<8)return toast("Nama, email, dan password minimal 8 karakter wajib diisi");
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return toast("Latitude dan longitude cabang wajib diisi");
+  if(!sbReady)return toast("Supabase belum terhubung");
+  try{
+    const {data,error}=await sb.functions.invoke("rapid-task",{
+      body:{nama:name,alamat:address,email,password}
+    });
+    if(error)throw error;
+    if(!data?.success)throw new Error(data?.error||"Cabang gagal dibuat");
+    const id=String(data.cabang_id);
+    branchCoords[id]={lat,lon};
+    localStorage.setItem("aykBranchCoords",JSON.stringify(branchCoords));
+    await loadBranches();
+    toast("Cabang dan akun Admin Cabang berhasil dibuat");
+    adminPage("branches",document.querySelectorAll(".tab")[5]||document.querySelector(".tab.active"));
+  }catch(e){
+    console.error("Gagal membuat cabang:",e);
+    toast("Gagal membuat cabang: "+(e.message||e));
+  }
+}
 async function removeBranch(id){if(!confirm("Hapus cabang ini?"))return;try{if(sbReady){let {error}=await sb.from("cabang").update({aktif:false}).eq("id",id);if(error)throw error;}branches=branches.filter(b=>b.id!==id);saveBranches();let a=JSON.parse(localStorage.getItem("aykBranchAdmins")||"[]").filter(x=>x.branchId!==id);localStorage.setItem("aykBranchAdmins",JSON.stringify(a));adminPage("branches",document.querySelectorAll(".tab")[3]);toast("Cabang dihapus")}catch(e){toast("Gagal hapus cabang: "+e.message)}}
 async function changeBranchPassword(id){let np=prompt("Password baru untuk "+branchName(id)+" (minimal 6 karakter):");if(np===null)return;if(np.length<6)return toast("Password minimal 6 karakter");try{if(sbReady){let {error}=await sb.from("admin_cabang").update({password:np}).eq("cabang_id",id);if(error)throw error;}let a=branchAdmins.filter(x=>x.branchId!==id);a.push({branchId:id,password:np});branchAdmins=a;localStorage.setItem("aykBranchAdmins",JSON.stringify(a));toast("Password cabang berhasil diubah")}catch(e){toast("Gagal ubah password: "+e.message)}}
 async function manageBranch(id){currentBranchId=id;await loadBranchOverrides(id);let box=document.getElementById("branchManage");if(!box)return;box.innerHTML=`<div class="panel"><h3>⚙️ Harga & Stok: ${branchName(id)}</h3><p><small>Kosongkan harga khusus untuk mengikuti harga pusat. Stok cabang wajib diisi.</small></p>${products.map(p=>{let ov=branchOverrides[String(p.id)]||{};return `<div style="border-top:1px solid #eee;padding:10px 0"><b>${p.name}</b><input id="bp_${p.id}" class="input" type="number" value="${ov.price??""}" placeholder="Harga khusus (kosong = harga pusat ${p.basePrice??p.price})"><input id="bs_${p.id}" class="input" type="number" value="${ov.stock??0}" placeholder="Stok cabang"><button class="btn green" onclick="saveBranchProduct('${id}',${p.id})">Simpan</button></div>`}).join("")}</div>`}
